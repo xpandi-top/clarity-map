@@ -2,7 +2,10 @@
 
 Turn mental clutter into a clear and actionable personal map.
 
-**Live demo:** https://xpandi-top.github.io/clarity-map/
+**Live demo:** https://apps.xpandi.top/clarity-map/
+
+(This account serves GitHub Pages from the custom domain `apps.xpandi.top`;
+https://xpandi-top.github.io/clarity-map/ redirects there.)
 
 Clarity Map is a local-first web app for the stage that comes *before* a task
 manager. It helps you write down what is on your mind, then work out one

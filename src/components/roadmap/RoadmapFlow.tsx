@@ -95,10 +95,14 @@ export function RoadmapFlow({
   return (
     <div className="roadmap-canvas">
       <ReactFlow
+        // Remounting when the visible subgraph changes re-runs `fitView`, so
+        // the roadmap always opens framed rather than at an arbitrary zoom.
+        key={`${focusId}:${nodes.map((node) => node.id).join(',')}`}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ padding: 0.2 }}
         nodesConnectable={false}
         onNodeClick={(_, node) => onSelectThought(node.id)}
         onEdgeClick={(_, edge) => onSelectEdge(edge.id)}
