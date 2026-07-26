@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog } from '../../components/common/Dialog'
+import { DimensionCreateDialog } from '../../components/dimensions/DimensionCreateDialog'
 import { MatrixPlot } from '../../components/matrix/MatrixPlot'
 import { ThoughtButton } from '../../components/thoughts/ThoughtButton'
 import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
@@ -16,6 +17,9 @@ import { allTags, filterThoughts } from '../../domain/selectors'
 import type { ThoughtStatus, ThoughtType } from '../../domain/types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { useActiveDimensions, useMatrixAxes, useStore, useThoughts } from '../../store'
+
+/** Sentinel value for the "create a dimension" entry in the axis pickers. */
+const CREATE_DIMENSION = '__create_dimension__'
 
 export function MatrixScreen() {
   const thoughts = useThoughts()
@@ -36,6 +40,8 @@ export function MatrixScreen() {
   const [statusFilter, setStatusFilter] = useState<ThoughtStatus>('active')
   const [tagFilter, setTagFilter] = useState('')
   const [openQuadrant, setOpenQuadrant] = useState<QuadrantId | null>(null)
+  // Which axis the "create a dimension" option was chosen from.
+  const [creatingFor, setCreatingFor] = useState<'x' | 'y' | null>(null)
 
   const tags = useMemo(() => allTags(thoughts), [thoughts])
 
@@ -95,13 +101,20 @@ export function MatrixScreen() {
             id="matrix-x"
             className="select"
             value={xDimension.id}
-            onChange={(event) => setMatrixAxes({ x: event.target.value, y: yDimension.id })}
+            onChange={(event) => {
+              if (event.target.value === CREATE_DIMENSION) {
+                setCreatingFor('x')
+                return
+              }
+              setMatrixAxes({ x: event.target.value, y: yDimension.id })
+            }}
           >
             {dimensions.map((dimension) => (
               <option key={dimension.id} value={dimension.id}>
                 {dimension.name}
               </option>
             ))}
+            <option value={CREATE_DIMENSION}>+ Create a dimension…</option>
           </select>
         </div>
         <div className="field">
@@ -110,13 +123,20 @@ export function MatrixScreen() {
             id="matrix-y"
             className="select"
             value={yDimension.id}
-            onChange={(event) => setMatrixAxes({ x: xDimension.id, y: event.target.value })}
+            onChange={(event) => {
+              if (event.target.value === CREATE_DIMENSION) {
+                setCreatingFor('y')
+                return
+              }
+              setMatrixAxes({ x: xDimension.id, y: event.target.value })
+            }}
           >
             {dimensions.map((dimension) => (
               <option key={dimension.id} value={dimension.id}>
                 {dimension.name}
               </option>
             ))}
+            <option value={CREATE_DIMENSION}>+ Create a dimension…</option>
           </select>
         </div>
         <div className="field">
@@ -243,6 +263,20 @@ export function MatrixScreen() {
           </>
         )}
       </section>
+
+      {creatingFor ? (
+        <DimensionCreateDialog
+          intro={`This becomes the ${creatingFor === 'x' ? 'horizontal' : 'vertical'} axis as soon as it is created. Two-choice dimensions draw quadrants; scales draw a scatter.`}
+          onClose={() => setCreatingFor(null)}
+          onCreated={(dimensionId) =>
+            setMatrixAxes(
+              creatingFor === 'x'
+                ? { x: dimensionId, y: yDimension.id }
+                : { x: xDimension.id, y: dimensionId },
+            )
+          }
+        />
+      ) : null}
 
       {openQuadrant ? (
         <Dialog

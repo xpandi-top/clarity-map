@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ConfirmButton } from '../../components/common/ConfirmButton'
+import { DimensionCreateDialog } from '../../components/dimensions/DimensionCreateDialog'
 import { createId } from '../../domain/ids'
 import type { Dimension, DimensionKind, DimensionStage } from '../../domain/types'
 import { useDimensions, useStore } from '../../store'
@@ -9,9 +10,8 @@ const STAGES: DimensionStage[] = ['capture', 'review', 'structure', 'action', 'o
 
 export function DimensionSettingsScreen() {
   const dimensions = useDimensions()
-  const addDimension = useStore((state) => state.addDimension)
-  const showToast = useStore((state) => state.showToast)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const ordered = [...dimensions].sort((a, b) => a.order - b.order)
 
@@ -29,29 +29,18 @@ export function DimensionSettingsScreen() {
         <button
           type="button"
           className="button button--primary"
-          onClick={() => {
-            const id = addDimension({
-              name: 'New dimension',
-              question: 'What would you like to ask?',
-              kind: 'scale',
-              min: 1,
-              max: 5,
-              step: 1,
-              lowLabel: 'Low',
-              highLabel: 'High',
-              required: false,
-              active: true,
-              stage: 'optional',
-            })
-            if (id) {
-              setEditingId(id)
-              showToast('Dimension created.')
-            }
-          }}
+          onClick={() => setCreating(true)}
         >
           Create a dimension
         </button>
       </div>
+
+      {creating ? (
+        <DimensionCreateDialog
+          onClose={() => setCreating(false)}
+          onCreated={(dimensionId) => setEditingId(dimensionId)}
+        />
+      ) : null}
 
       <ul className="settings-list">
         {ordered.map((dimension, index) => (

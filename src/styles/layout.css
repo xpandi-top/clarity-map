@@ -33,12 +33,27 @@
 
 .main-nav {
   display: flex;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
+.main-nav__stages,
+.main-nav__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .main-nav a {
-  padding: 0.25rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
   border-radius: var(--radius);
   color: var(--text-muted);
   text-decoration: none;
@@ -55,30 +70,28 @@
   color: var(--accent-text);
 }
 
-.stage-bar {
-  max-width: var(--content-width);
-  margin: 0 auto;
-  padding: 0 var(--space-4) var(--space-2);
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  font-size: 0.82rem;
+/* The step number carries the sequence the old second row used to show. */
+.main-nav__step {
+  font-size: 0.7rem;
   color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
 }
 
-.stage-bar a {
-  color: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
+.main-nav a.is-active .main-nav__step {
+  color: var(--accent);
 }
 
-.stage-bar a:hover {
-  color: var(--text);
+.main-nav__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.2rem 0.2rem;
+  background: var(--border);
 }
 
-.stage-bar a.is-active {
-  color: var(--accent-text);
-  border-bottom-color: var(--accent);
+@media (max-width: 720px) {
+  .main-nav__divider {
+    display: none;
+  }
 }
 
 .app-main {
@@ -316,6 +329,23 @@
   background: var(--accent-soft);
 }
 
+.roadmap-node.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.roadmap-handle {
+  width: 9px;
+  height: 9px;
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border-strong);
+}
+
+.roadmap-node:hover .roadmap-handle {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .roadmap-node__meta {
   color: var(--text-faint);
   font-size: 0.72rem;
@@ -328,6 +358,78 @@
 
 .roadmap-list li {
   margin: var(--space-1) 0;
+}
+
+/* ---------- Type map ---------- */
+
+.type-map {
+  width: 100%;
+  height: auto;
+  max-height: 26rem;
+  overflow: visible;
+}
+
+.type-map__node rect {
+  fill: var(--surface-sunken);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  cursor: pointer;
+  transition:
+    fill 120ms ease,
+    stroke 120ms ease;
+}
+
+.type-map__node:hover rect {
+  fill: var(--surface-hover);
+}
+
+.type-map__node.is-selected rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.type-map__node:focus-visible rect {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.type-map__node:focus {
+  outline: none;
+}
+
+.type-map__node-label {
+  font-size: 14px;
+  fill: var(--text);
+}
+
+.type-map__node-count,
+.type-map__edge-label,
+.type-map__column-label {
+  font-size: 11px;
+  fill: var(--text-faint);
+}
+
+.type-map__column-label {
+  font-size: 12px;
+}
+
+/* ---------- Relationship legend ---------- */
+
+.relation-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.relation-legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.relation-legend svg {
+  flex-shrink: 0;
 }
 
 /* ---------- Settings ---------- */

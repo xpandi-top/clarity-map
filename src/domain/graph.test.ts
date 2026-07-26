@@ -3,11 +3,14 @@ import {
   dedupeRelations,
   downstreamIds,
   findCycles,
+  hierarchy,
   isDuplicateRelation,
   neighbourhoodIds,
+  relationEndpoints,
   upstreamIds,
   wouldCreateCycle,
 } from './graph'
+import { RELATION_TYPES } from './defaults'
 import { makeRelation } from '../test/factories'
 
 // walk -> health -> wellbeing, and health breaks down into stretching.
@@ -51,6 +54,33 @@ describe('graph traversal', () => {
       'stretching',
       'walk',
     ])
+  })
+})
+
+describe('drawing a connection on the canvas', () => {
+  it.each(RELATION_TYPES)(
+    'stores a %s relation so the intended thought ends up on top',
+    (type) => {
+      const endpoints = relationEndpoints(type, 'upper', 'lower')
+      const levels = hierarchy({ ...endpoints, type })
+      if (levels) {
+        expect(levels).toEqual({ upper: 'upper', lower: 'lower' })
+      } else {
+        // Lateral relations have no direction; the drag order is kept as-is.
+        expect(endpoints).toEqual({ sourceThoughtId: 'upper', targetThoughtId: 'lower' })
+      }
+    },
+  )
+
+  it('inverts breaksDownInto relative to the upward relations', () => {
+    expect(relationEndpoints('serves', 'goal', 'action')).toEqual({
+      sourceThoughtId: 'action',
+      targetThoughtId: 'goal',
+    })
+    expect(relationEndpoints('breaksDownInto', 'goal', 'action')).toEqual({
+      sourceThoughtId: 'goal',
+      targetThoughtId: 'action',
+    })
   })
 })
 

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BreakdownDialog } from '../../components/thoughts/BreakdownDialog'
 import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
+import { TypeMapDiagram } from '../../components/structure/TypeMapDiagram'
 import { OUTCOME_HINT, looksLikeOutcome } from '../../domain/classification'
 import {
   BREAKDOWN_TYPES,
@@ -10,6 +11,13 @@ import {
   THOUGHT_TYPE_LABEL,
 } from '../../domain/defaults'
 import { findCycles } from '../../domain/graph'
+import {
+  SIMPLE_TYPES,
+  TYPE_GROUPS,
+  TYPE_LONG_DESCRIPTION,
+  TYPE_MAP_SENTENCE,
+  groupOf,
+} from '../../domain/typeMap'
 import type { ThoughtType } from '../../domain/types'
 import { useRelations, useStore, useVisibleThoughts } from '../../store'
 
@@ -20,6 +28,8 @@ export function StructureScreen() {
   const selectThought = useStore((state) => state.selectThought)
   const [breakdownId, setBreakdownId] = useState<string | null>(null)
   const [onlyUnclassified, setOnlyUnclassified] = useState(false)
+  const [simplifiedMap, setSimplifiedMap] = useState(true)
+  const [selectedType, setSelectedType] = useState<ThoughtType | null>(null)
 
   const visible = useMemo(
     () =>
@@ -32,6 +42,14 @@ export function StructureScreen() {
   const byId = useMemo(() => new Map(thoughts.map((entry) => [entry.id, entry])), [thoughts])
   const cycles = useMemo(() => findCycles(relations), [relations])
   const unclassified = thoughts.filter((thought) => thought.type === 'unclassified').length
+
+  const countsByType = useMemo(() => {
+    const counts: Partial<Record<ThoughtType, number>> = {}
+    for (const thought of thoughts) {
+      counts[thought.type] = (counts[thought.type] ?? 0) + 1
+    }
+    return counts
+  }, [thoughts])
 
   return (
     <div className="stack">
@@ -70,17 +88,83 @@ export function StructureScreen() {
         </div>
       ) : null}
 
-      <details className="card">
-        <summary>What the types mean</summary>
-        <dl style={{ marginTop: 'var(--space-3)' }}>
-          {THOUGHT_TYPES.filter((type) => type !== 'unclassified').map((type) => (
-            <div key={type} style={{ marginBottom: 'var(--space-2)' }}>
-              <dt className="label">{THOUGHT_TYPE_LABEL[type]}</dt>
-              <dd style={{ margin: 0 }}>{THOUGHT_TYPE_DEFINITION[type]}</dd>
+      <section className="card stack">
+        <div className="spread">
+          <div>
+            <h2 style={{ margin: 0 }}>How the types fit together</h2>
+            <p className="muted" style={{ marginBottom: 0 }}>{TYPE_MAP_SENTENCE}</p>
+          </div>
+          <button
+            type="button"
+            className="button"
+            aria-pressed={simplifiedMap}
+            onClick={() => {
+              setSimplifiedMap((value) => !value)
+              setSelectedType(null)
+            }}
+          >
+            {simplifiedMap ? 'Show all thirteen types' : 'Show the simple five'}
+          </button>
+        </div>
+
+        <TypeMapDiagram
+          simplified={simplifiedMap}
+          selected={selectedType}
+          onSelect={(type) => setSelectedType((current) => (current === type ? null : type))}
+          counts={countsByType}
+        />
+
+        <p className="faint">
+          Select a box to read what that type means. Solid arrows break a thought down a level;
+          dashed arrows are what a thought often turns into once it is clearer.
+          {simplifiedMap
+            ? ' These five cover most thoughts — the rest are refinements.'
+            : null}
+        </p>
+
+        {selectedType ? (
+          <div className="notice stack" style={{ gap: 'var(--space-2)' }}>
+            <div className="spread">
+              <h3 style={{ margin: 0 }}>{THOUGHT_TYPE_LABEL[selectedType]}</h3>
+              <span className="chip">
+                {groupOf(selectedType)?.label ?? 'Type'} ·{' '}
+                {countsByType[selectedType] ?? 0} in this workspace
+              </span>
             </div>
-          ))}
-        </dl>
-      </details>
+            <p style={{ margin: 0 }}>{THOUGHT_TYPE_DEFINITION[selectedType]}</p>
+            <p style={{ margin: 0 }} className="muted">
+              {TYPE_LONG_DESCRIPTION[selectedType]}
+            </p>
+          </div>
+        ) : null}
+
+        <details>
+          <summary>Every type, grouped</summary>
+          <div className="stack" style={{ marginTop: 'var(--space-3)' }}>
+            {TYPE_GROUPS.map((group) => (
+              <div key={group.id}>
+                <h3 style={{ marginBottom: 'var(--space-1)' }}>{group.label}</h3>
+                <p className="faint" style={{ marginTop: 0 }}>{group.summary}</p>
+                <dl style={{ margin: 0 }}>
+                  {group.types.map((type) => (
+                    <div key={type} style={{ marginBottom: 'var(--space-2)' }}>
+                      <dt className="label">
+                        {THOUGHT_TYPE_LABEL[type]}
+                        {SIMPLE_TYPES.includes(type) ? (
+                          <span className="chip" style={{ marginLeft: 'var(--space-2)' }}>
+                            start here
+                          </span>
+                        ) : null}
+                      </dt>
+                      <dd style={{ margin: 0 }}>{TYPE_LONG_DESCRIPTION[type]}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </details>
+      </section>
 
       <ul className="settings-list">
         {visible.map((thought) => {

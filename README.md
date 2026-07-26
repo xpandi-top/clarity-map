@@ -50,20 +50,25 @@ simply information about where the pull is coming from.
   timestamps, relationships, duplicate, archive, delete, and roadmap access.
 - **Custom dimensions** — binary, scale, single-select, multi-select, and
   boolean, each with its own question, helper text, stage, options, and range.
-  Built-in dimensions can be disabled but not deleted.
+  Creatable straight from either matrix axis picker, which then switches that
+  axis to the new dimension. Built-in dimensions can be disabled but not
+  deleted.
 - **Pairwise comparison** — quick, complete, and manual modes over any
   dimension or subset, with a live ranking. Skipped rounds never affect scores.
-- **Thought classification** — thirteen types with plain-language definitions
-  and a non-blocking hint when a described result is filed as an action.
+- **Thought classification** — a diagram of how the types feed into one
+  another, in a simplified five-type view or the full thirteen, with counts,
+  per-type detail, and a non-blocking hint when a described result is filed as
+  an action.
 - **Relationships** — seven relation types forming a graph, not a tree. Exact
   duplicates are rejected and loops are reported rather than silently blocked.
 - **Manual goal breakdown** — goal, habit, and decision templates that create
   real, connected thoughts. No AI involved.
 - **Action assessment** — difficulty, priority, impact, energy effect, urgency,
   estimated minutes, and practical flags, with filters and a "Next actions" view.
-- **Interactive roadmap** — a laid-out graph with zoom, pan, minimap, node and
-  edge selection, direction and depth controls, relation-type filters, and a
-  full list alternative.
+- **Editable roadmap** — a laid-out graph you can rearrange by dragging, with
+  new relationships drawn between node handles, edge deletion, zoom, pan,
+  minimap, direction and depth controls, a colour-and-line-pattern legend that
+  doubles as a filter, and a full list alternative.
 - **Rules** — user-defined conditions that produce *suggestions only*. They are
   applied, ignored, or permanently dismissed by you.
 - **Local persistence, import and export** — JSON export with a validated,
@@ -202,7 +207,9 @@ The deployed page is static files on GitHub Pages.
   legitimately non-hierarchical.
 - The classification hint ("this may describe a result") uses a small keyword
   heuristic, not language understanding.
-- The JavaScript bundle is a single chunk of roughly 570 kB (about 174 kB
+- Node positions you drag on the roadmap last for the session. They are not
+  persisted, so reopening the roadmap re-runs the automatic layout.
+- The JavaScript bundle is a single chunk of roughly 585 kB (about 180 kB
   gzipped), most of it the graph library. Code splitting is an easy follow-up.
 - `npm audit` reports an advisory against `react-router` that concerns RSC mode
   only. This app is a client-rendered `HashRouter` SPA and does not use RSC.

@@ -22,6 +22,22 @@ export function isLateral(type: RelationType): boolean {
   return type === 'conflictsWith' || type === 'relatedTo'
 }
 
+/**
+ * Inverse of `hierarchy`: given which thought should sit above the other,
+ * work out which way round the relation has to be stored. Used when a
+ * connection is drawn on the roadmap canvas.
+ */
+export function relationEndpoints(
+  type: RelationType,
+  upperId: string,
+  lowerId: string,
+): { sourceThoughtId: string; targetThoughtId: string } {
+  if (type === 'breaksDownInto' || isLateral(type)) {
+    return { sourceThoughtId: upperId, targetThoughtId: lowerId }
+  }
+  return { sourceThoughtId: lowerId, targetThoughtId: upperId }
+}
+
 /** True when an identical relation (same pair, same type) already exists. */
 export function isDuplicateRelation(
   relations: ThoughtRelation[],
