@@ -11,6 +11,7 @@ import {
   THOUGHT_TYPE_LABEL,
 } from '../../domain/defaults'
 import { findCycles } from '../../domain/graph'
+import { filterThoughts } from '../../domain/selectors'
 import {
   SIMPLE_TYPES,
   TYPE_GROUPS,
@@ -27,21 +28,20 @@ export function StructureScreen() {
   const setThoughtType = useStore((state) => state.setThoughtType)
   const selectThought = useStore((state) => state.selectThought)
   const [breakdownId, setBreakdownId] = useState<string | null>(null)
-  const [onlyUnclassified, setOnlyUnclassified] = useState(false)
+  // Empty means every type. Drives both the chips and the shortcut button.
+  const [typeFilter, setTypeFilter] = useState<ThoughtType[]>([])
   const [simplifiedMap, setSimplifiedMap] = useState(true)
   const [selectedType, setSelectedType] = useState<ThoughtType | null>(null)
 
   const visible = useMemo(
-    () =>
-      onlyUnclassified
-        ? thoughts.filter((thought) => thought.type === 'unclassified')
-        : thoughts,
-    [thoughts, onlyUnclassified],
+    () => filterThoughts(thoughts, { types: typeFilter }),
+    [thoughts, typeFilter],
   )
 
   const byId = useMemo(() => new Map(thoughts.map((entry) => [entry.id, entry])), [thoughts])
   const cycles = useMemo(() => findCycles(relations), [relations])
   const unclassified = thoughts.filter((thought) => thought.type === 'unclassified').length
+  const classified = thoughts.length - unclassified
 
   const countsByType = useMemo(() => {
     const counts: Partial<Record<ThoughtType, number>> = {}
@@ -50,6 +50,25 @@ export function StructureScreen() {
     }
     return counts
   }, [thoughts])
+
+  // Unclassified always shows so the filter is reachable; the rest appear
+  // once the workspace actually holds one.
+  const filterableTypes = useMemo(
+    () =>
+      THOUGHT_TYPES.filter(
+        (type) => type === 'unclassified' || (countsByType[type] ?? 0) > 0,
+      ),
+    [countsByType],
+  )
+
+  const onlyUnclassified = typeFilter.length === 1 && typeFilter[0] === 'unclassified'
+
+  const toggleType = (type: ThoughtType) =>
+    setTypeFilter((current) =>
+      current.includes(type)
+        ? current.filter((entry) => entry !== type)
+        : [...current, type],
+    )
 
   return (
     <div className="stack">
@@ -62,18 +81,50 @@ export function StructureScreen() {
       </div>
 
       <div className="spread">
-        <p className="muted" style={{ margin: 0 }}>
-          {unclassified} of {thoughts.length} still unclassified
+        <p className="muted" style={{ margin: 0 }} role="status" aria-live="polite">
+          {[
+            thoughts.length === 0
+              ? 'No thoughts yet'
+              : unclassified === 0
+                ? `All ${thoughts.length} thoughts have a type`
+                : `${classified} of ${thoughts.length} given a type · ${unclassified} still unclassified`,
+            typeFilter.length > 0 ? `showing ${visible.length}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
         <button
           type="button"
           className="button"
           aria-pressed={onlyUnclassified}
-          onClick={() => setOnlyUnclassified((value) => !value)}
+          onClick={() => setTypeFilter(onlyUnclassified ? [] : ['unclassified'])}
         >
           Show only unclassified
         </button>
       </div>
+
+      <fieldset className="filter-bar" style={{ border: 'none', padding: 0, margin: 0 }}>
+        <legend className="label">Filter by type</legend>
+        <button
+          type="button"
+          className="button button--small"
+          aria-pressed={typeFilter.length === 0}
+          onClick={() => setTypeFilter([])}
+        >
+          All types <span className="faint">{thoughts.length}</span>
+        </button>
+        {filterableTypes.map((type) => (
+          <button
+            key={type}
+            type="button"
+            className="button button--small"
+            aria-pressed={typeFilter.includes(type)}
+            onClick={() => toggleType(type)}
+          >
+            {THOUGHT_TYPE_LABEL[type]} <span className="faint">{countsByType[type] ?? 0}</span>
+          </button>
+        ))}
+      </fieldset>
 
       {cycles.length > 0 ? (
         <div className="notice notice--warning" role="status">
@@ -135,6 +186,17 @@ export function StructureScreen() {
             <p style={{ margin: 0 }} className="muted">
               {TYPE_LONG_DESCRIPTION[selectedType]}
             </p>
+            {(countsByType[selectedType] ?? 0) > 0 ? (
+              <div className="row">
+                <button
+                  type="button"
+                  className="button button--small"
+                  onClick={() => setTypeFilter([selectedType])}
+                >
+                  Show only these below
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -240,7 +302,24 @@ export function StructureScreen() {
       </ul>
 
       {visible.length === 0 ? (
-        <p className="empty-state">Nothing to classify here.</p>
+        <div className="empty-state stack">
+          <p style={{ margin: 0 }}>
+            {thoughts.length === 0
+              ? 'Nothing captured yet.'
+              : 'No thoughts match this filter.'}
+          </p>
+          {typeFilter.length > 0 ? (
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="button button--small"
+                onClick={() => setTypeFilter([])}
+              >
+                Show all types
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {breakdownId ? (

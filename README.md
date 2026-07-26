@@ -57,8 +57,8 @@ simply information about where the pull is coming from.
   dimension or subset, with a live ranking. Skipped rounds never affect scores.
 - **Thought classification** — a diagram of how the types feed into one
   another, in a simplified five-type view or the full thirteen, with counts,
-  per-type detail, and a non-blocking hint when a described result is filed as
-  an action.
+  per-type detail, multi-select filtering of the list by type, and a
+  non-blocking hint when a described result is filed as an action.
 - **Relationships** — seven relation types forming a graph, not a tree. Exact
   duplicates are rejected and loops are reported rather than silently blocked.
 - **Manual goal breakdown** — goal, habit, and decision templates that create
