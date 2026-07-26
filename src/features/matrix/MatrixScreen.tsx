@@ -3,20 +3,29 @@ import { Link } from 'react-router-dom'
 import { Dialog } from '../../components/common/Dialog'
 import { DimensionCreateDialog } from '../../components/dimensions/DimensionCreateDialog'
 import { MatrixPlot } from '../../components/matrix/MatrixPlot'
+import { QuadrantBoard } from '../../components/matrix/QuadrantBoard'
 import { ThoughtButton } from '../../components/thoughts/ThoughtButton'
-import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import { BUILTIN_DIMENSION, THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import {
-  QUADRANTS,
   computeMatrixPoints,
   matrixLayout,
+  quadrantOf,
   quadrantTitle,
+  valueForHalf,
   valueForPosition,
   type QuadrantId,
 } from '../../domain/matrix'
+import { ORDER_LABEL, hasComparisonData, orderThoughts, type ThoughtOrder } from '../../domain/ordering'
 import { allTags, filterThoughts } from '../../domain/selectors'
-import type { ThoughtStatus, ThoughtType } from '../../domain/types'
+import type { Thought, ThoughtStatus, ThoughtType } from '../../domain/types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
-import { useActiveDimensions, useMatrixAxes, useStore, useThoughts } from '../../store'
+import {
+  useActiveDimensions,
+  useComparisons,
+  useMatrixAxes,
+  useStore,
+  useThoughts,
+} from '../../store'
 
 /** Sentinel value for the "create a dimension" entry in the axis pickers. */
 const CREATE_DIMENSION = '__create_dimension__'
@@ -24,6 +33,7 @@ const CREATE_DIMENSION = '__create_dimension__'
 export function MatrixScreen() {
   const thoughts = useThoughts()
   const dimensions = useActiveDimensions()
+  const comparisons = useComparisons()
   const { xDimension, yDimension } = useMatrixAxes()
   const setMatrixAxes = useStore((state) => state.setMatrixAxes)
   const setDimensionValue = useStore((state) => state.setDimensionValue)
@@ -42,8 +52,15 @@ export function MatrixScreen() {
   const [openQuadrant, setOpenQuadrant] = useState<QuadrantId | null>(null)
   // Which axis the "create a dimension" option was chosen from.
   const [creatingFor, setCreatingFor] = useState<'x' | 'y' | null>(null)
+  const [order, setOrder] = useState<ThoughtOrder>('comparison')
+  const [rankDimensionId, setRankDimensionId] = useState<string>(BUILTIN_DIMENSION.importance)
 
   const tags = useMemo(() => allTags(thoughts), [thoughts])
+
+  const comparableDimensions = useMemo(
+    () => dimensions.filter((dimension) => dimension.id !== BUILTIN_DIMENSION.thoughtType),
+    [dimensions],
+  )
 
   const filtered = useMemo(
     () =>
@@ -56,9 +73,39 @@ export function MatrixScreen() {
     [thoughts, search, typeFilter, statusFilter, tagFilter],
   )
 
+  const sorted = useMemo(
+    () =>
+      orderThoughts(filtered, {
+        order,
+        comparisons,
+        dimensionId: rankDimensionId,
+      }),
+    [filtered, order, comparisons, rankDimensionId],
+  )
+
   const { points, unresolved } = useMemo(
-    () => computeMatrixPoints(filtered, xDimension, yDimension),
-    [filtered, xDimension, yDimension],
+    () => computeMatrixPoints(sorted, xDimension, yDimension),
+    [sorted, xDimension, yDimension],
+  )
+
+  /** Ordered thoughts bucketed by quadrant, for the board view. */
+  const groups = useMemo(() => {
+    const buckets: Record<QuadrantId, Thought[]> = {
+      lowHigh: [],
+      highHigh: [],
+      lowLow: [],
+      highLow: [],
+    }
+    for (const thought of sorted) {
+      const quadrant = quadrantOf(thought, xDimension, yDimension)
+      if (quadrant) buckets[quadrant].push(thought)
+    }
+    return buckets
+  }, [sorted, xDimension, yDimension])
+
+  const rankingAvailable = useMemo(
+    () => hasComparisonData(filtered, comparisons, rankDimensionId),
+    [filtered, comparisons, rankDimensionId],
   )
 
   const layout = matrixLayout(xDimension, yDimension)
@@ -67,6 +114,14 @@ export function MatrixScreen() {
     setDimensionValue(thoughtId, xDimension.id, valueForPosition(xDimension, x))
     setDimensionValue(thoughtId, yDimension.id, valueForPosition(yDimension, y))
     showToast('Position updated.')
+  }
+
+  const moveToQuadrant = (thoughtId: string, quadrant: QuadrantId) => {
+    const xHigh = quadrant === 'highHigh' || quadrant === 'highLow'
+    const yHigh = quadrant === 'highHigh' || quadrant === 'lowHigh'
+    setDimensionValue(thoughtId, xDimension.id, valueForHalf(xDimension, xHigh))
+    setDimensionValue(thoughtId, yDimension.id, valueForHalf(yDimension, yHigh))
+    showToast(`Moved to ${quadrantTitle(quadrant, xDimension, yDimension)}.`)
   }
 
   if (!xDimension || !yDimension) {
@@ -83,15 +138,17 @@ export function MatrixScreen() {
           <h1>Matrix</h1>
           <p>This is one way to view your thoughts. Nothing here is a verdict.</p>
         </div>
-        <button
-          type="button"
-          className="button"
-          aria-pressed={listMode}
-          disabled={isNarrow}
-          onClick={() => setForceList((value) => !value)}
-        >
-          {listMode ? 'Showing lists' : 'Switch to lists'}
-        </button>
+        {layout === 'quadrant' ? null : (
+          <button
+            type="button"
+            className="button"
+            aria-pressed={listMode}
+            disabled={isNarrow}
+            onClick={() => setForceList((value) => !value)}
+          >
+            {listMode ? 'Showing lists' : 'Switch to lists'}
+          </button>
+        )}
       </div>
 
       <div className="filter-bar">
@@ -177,6 +234,38 @@ export function MatrixScreen() {
             <option value="archived">Archived</option>
           </select>
         </div>
+        <div className="field">
+          <label htmlFor="matrix-order">Order by</label>
+          <select
+            id="matrix-order"
+            className="select"
+            value={order}
+            onChange={(event) => setOrder(event.target.value as ThoughtOrder)}
+          >
+            {(Object.keys(ORDER_LABEL) as ThoughtOrder[]).map((entry) => (
+              <option key={entry} value={entry}>
+                {ORDER_LABEL[entry]}
+              </option>
+            ))}
+          </select>
+        </div>
+        {order === 'comparison' ? (
+          <div className="field">
+            <label htmlFor="matrix-rank-dimension">Ranked on</label>
+            <select
+              id="matrix-rank-dimension"
+              className="select"
+              value={rankDimensionId}
+              onChange={(event) => setRankDimensionId(event.target.value)}
+            >
+              {comparableDimensions.map((dimension) => (
+                <option key={dimension.id} value={dimension.id}>
+                  {dimension.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         {tags.length > 0 ? (
           <div className="field">
             <label htmlFor="matrix-tag">Tag</label>
@@ -197,38 +286,48 @@ export function MatrixScreen() {
         ) : null}
       </div>
 
-      {listMode ? (
+      {order === 'comparison' ? (
+        <p className="faint" style={{ margin: 0 }}>
+          {rankingAvailable
+            ? 'Ordered by your pairwise ranking. Thoughts you have not compared yet come last.'
+            : 'No comparisons recorded for this dimension yet, so priority is used instead.'}{' '}
+          <Link to="/compare">Open Compare</Link>
+        </p>
+      ) : null}
+
+      {layout === 'quadrant' ? (
+        <>
+          <QuadrantBoard
+            groups={groups}
+            xDimension={xDimension}
+            yDimension={yDimension}
+            selectedThoughtId={selectedThoughtId}
+            onSelect={selectThought}
+            onMoveToQuadrant={moveToQuadrant}
+            onOpenQuadrant={setOpenQuadrant}
+            showRank={order === 'comparison' && rankingAvailable}
+          />
+          <p className="faint" style={{ margin: 0 }}>
+            Drag a card into another quadrant to change its answers. You can also open a thought
+            and change them there.
+          </p>
+        </>
+      ) : listMode ? (
         <div className="quadrant-grid">
-          {layout === 'quadrant' ? (
-            QUADRANTS.map((quadrant) => (
-              <section key={quadrant.id} className="card quadrant-card">
-                <h3>{quadrantTitle(quadrant.id, xDimension, yDimension)}</h3>
-                <p className="faint">{quadrantPoints(quadrant.id).length} thoughts</p>
-                <ul className="stack" style={{ gap: 'var(--space-2)' }}>
-                  {quadrantPoints(quadrant.id).map((point) => (
-                    <li key={point.thought.id}>
-                      <ThoughtButton
-                        thought={point.thought}
-                        onSelect={selectThought}
-                        selected={selectedThoughtId === point.thought.id}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))
-          ) : (
-            <section className="card">
-              <h3>All plotted thoughts</h3>
-              <ul className="stack" style={{ gap: 'var(--space-2)' }}>
-                {points.map((point) => (
-                  <li key={point.thought.id}>
-                    <ThoughtButton thought={point.thought} onSelect={selectThought} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <section className="card">
+            <h3>All plotted thoughts</h3>
+            <ul className="stack" style={{ gap: 'var(--space-2)' }}>
+              {points.map((point) => (
+                <li key={point.thought.id}>
+                  <ThoughtButton
+                    thought={point.thought}
+                    onSelect={selectThought}
+                    selected={selectedThoughtId === point.thought.id}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       ) : (
         <MatrixPlot

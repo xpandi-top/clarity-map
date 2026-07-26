@@ -257,6 +257,192 @@
   display: block;
 }
 
+/* ---------- Quadrant board ---------- */
+
+.quadrant-board-frame {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.quadrant-board__axis-x {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/*
+ * The column itself stays in normal writing mode so `space-between` spreads
+ * the three labels down the board; only the labels themselves are rotated.
+ */
+.quadrant-board__axis-y {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: var(--space-3) 0;
+}
+
+.quadrant-board__axis-y span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+.quadrant-board {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.quadrant-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 14rem;
+  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.quadrant-panel.is-drop-target {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.quadrant-panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+}
+
+.quadrant-panel__title {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+
+.quadrant-panel__title:hover {
+  text-decoration-color: var(--accent);
+}
+
+.quadrant-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 20rem;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.quadrant-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-left-color: var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: grab;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.quadrant-card:hover {
+  background: var(--surface-hover);
+}
+
+.quadrant-card:active {
+  cursor: grabbing;
+}
+
+.quadrant-card.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.quadrant-card.is-dragging {
+  opacity: 0.45;
+}
+
+.quadrant-card--want {
+  border-left-color: var(--want);
+}
+
+.quadrant-card--should {
+  border-left-color: var(--should);
+}
+
+.quadrant-card__text {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.quadrant-card__rank {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-right: 0.35rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.quadrant-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.quadrant-card__meta:empty {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .quadrant-board {
+    grid-template-columns: 1fr;
+  }
+
+  .quadrant-board-frame {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quadrant-board__axis-x,
+  .quadrant-board__axis-y {
+    display: none;
+  }
+
+  .quadrant-board {
+    grid-column: 1;
+  }
+}
+
 .quadrant-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -464,4 +650,21 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   align-items: center;
+}
+
+.quick-relation {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.quick-relation__type {
+  width: auto;
+  max-width: 12rem;
+}
+
+.quick-relation__target {
+  width: auto;
+  max-width: 22rem;
+  flex: 1 1 14rem;
 }

@@ -44,9 +44,11 @@ simply information about where the pull is coming from.
 - **Importance review** — one thought at a time, filtered by whether a thought
   is still unanswered or already marked important or not important, with
   keyboard navigation and the freedom to change earlier answers.
-- **Two-dimensional matrix** — any two dimensions on the axes, drag to
-  reposition, click a quadrant heading for a list, plus search and filters by
-  type, status, and tag. Unplaced thoughts are listed separately.
+- **Two-dimensional matrix** — any two dimensions on the axes. Two binary
+  dimensions give a four-panel board whose cards are dragged between quadrants
+  and ordered by your pairwise ranking; scale dimensions give a scatter plot
+  where position carries meaning. Search and filter by type, status, and tag.
+  Unplaced thoughts are listed separately.
 - **Thought detail panel** — text, description, type, dimensions, tags, status,
   timestamps, relationships, duplicate, archive, delete, and roadmap access.
 - **Custom dimensions** — binary, scale, single-select, multi-select, and
@@ -60,8 +62,11 @@ simply information about where the pull is coming from.
   another, in a simplified five-type view or the full thirteen, with counts,
   per-type detail, multi-select filtering of the list by type, and a
   non-blocking hint when a described result is filed as an action.
-- **Relationships** — seven relation types forming a graph, not a tree. Exact
-  duplicates are rejected and loops are reported rather than silently blocked.
+- **Relationships** — seven relation types forming a graph, not a tree. Added
+  in one step from Structure ("this contributes to / is related to…", with the
+  target list grouped by type), from the detail panel, or by drawing on the
+  roadmap. Exact duplicates are rejected and loops are reported rather than
+  silently blocked.
 - **Manual goal breakdown** — goal, habit, and decision templates that create
   real, connected thoughts. No AI involved.
 - **Action assessment** — difficulty, priority, impact, energy effect, urgency,
@@ -202,6 +207,8 @@ The deployed page is static files on GitHub Pages.
   exporting and importing a file.
 - The matrix drag interaction needs a pointer. Every action it performs is also
   reachable from the detail panel and the list views, so nothing depends on it.
+- The matrix orders cards by the pairwise ranking of one dimension at a time.
+  Thoughts you have not compared yet fall back to priority order and sit last.
 - Comparison scoring is a deliberately simple win/tie ratio rather than an Elo
   or Bradley–Terry model, chosen so the number stays explainable.
 - Cycle detection warns but never blocks, since some relation types are

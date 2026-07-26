@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BreakdownDialog } from '../../components/thoughts/BreakdownDialog'
+import { QuickRelation } from '../../components/thoughts/QuickRelation'
 import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
 import { TypeMapDiagram } from '../../components/structure/TypeMapDiagram'
 import { OUTCOME_HINT, looksLikeOutcome } from '../../domain/classification'
@@ -27,6 +28,7 @@ export function StructureScreen() {
   const relations = useRelations()
   const setThoughtType = useStore((state) => state.setThoughtType)
   const selectThought = useStore((state) => state.selectThought)
+  const deleteRelation = useStore((state) => state.deleteRelation)
   const [breakdownId, setBreakdownId] = useState<string | null>(null)
   // Empty means every type. Drives both the chips and the shortcut button.
   const [typeFilter, setTypeFilter] = useState<ThoughtType[]>([])
@@ -292,10 +294,22 @@ export function StructureScreen() {
                     <li key={relation.id} className="chip">
                       {RELATION_LABEL[relation.type]}{' '}
                       {byId.get(relation.targetThoughtId)?.text ?? 'a removed thought'}
+                      <button
+                        type="button"
+                        className="button button--quiet button--small"
+                        aria-label={`Remove relationship: ${RELATION_LABEL[relation.type]} ${
+                          byId.get(relation.targetThoughtId)?.text ?? 'a removed thought'
+                        }`}
+                        onClick={() => deleteRelation(relation.id)}
+                      >
+                        ×
+                      </button>
                     </li>
                   ))}
                 </ul>
               ) : null}
+
+              <QuickRelation sourceThoughtId={thought.id} />
             </li>
           )
         })}
