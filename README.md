@@ -41,8 +41,9 @@ simply information about where the pull is coming from.
   the input clears and refocuses, and the last deletion can be undone.
 - **Want vs Should** — asked once per thought, with `W` / `S` / `Esc` shortcuts,
   never blocking.
-- **Importance review** — one thought at a time, with keyboard navigation and
-  the freedom to change earlier answers.
+- **Importance review** — one thought at a time, filtered by whether a thought
+  is still unanswered or already marked important or not important, with
+  keyboard navigation and the freedom to change earlier answers.
 - **Two-dimensional matrix** — any two dimensions on the axes, drag to
   reposition, click a quadrant heading for a list, plus search and filters by
   type, status, and tag. Unplaced thoughts are listed separately.
