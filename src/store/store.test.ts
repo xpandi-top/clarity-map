@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetStore, useStore } from './store'
 import { migratePersistedState } from './migrations'
-import { BUILTIN_DIMENSION, IMPORTANCE_YES, MOTIVATION_WANT } from '../domain/defaults'
+import {
+  BUILTIN_DIMENSION,
+  IMPORTANCE_YES,
+  MOTIVATION_WANT,
+  createDefaultDimensions,
+} from '../domain/defaults'
 import { createExampleWorkspace } from '../domain/example'
 import { buildExport, serializeExport } from '../domain/importExport'
 import { SCHEMA_VERSION, STORAGE_KEY } from '../domain/schema'
@@ -288,6 +293,38 @@ describe('schema migration', () => {
     const migrated = migratePersistedState({ thoughts: [], workspaces: [] }, 0)
     expect(migrated.schemaVersion).toBe(SCHEMA_VERSION)
     expect(migrated.thoughts).toEqual([])
+  })
+
+  it('gives built-in dimensions saved at version 1 their comparative wording', () => {
+    // A version 1 snapshot: no dimension knew how to phrase a comparison.
+    const legacy = createDefaultDimensions().map(({ comparativeQuestion: _drop, ...rest }) => rest)
+    const migrated = migratePersistedState(
+      { schemaVersion: 1, dimensionsByWorkspace: { ws_1: legacy } },
+      1,
+    )
+
+    const importance = migrated.dimensionsByWorkspace.ws_1.find(
+      (entry) => entry.id === BUILTIN_DIMENSION.importance,
+    )
+    expect(importance?.comparativeQuestion).toBe('Which one matters more to you?')
+  })
+
+  it('leaves wording the user wrote alone', () => {
+    const custom = createDefaultDimensions().map((entry) =>
+      entry.id === BUILTIN_DIMENSION.importance
+        ? { ...entry, comparativeQuestion: 'Which one would I regret dropping?' }
+        : entry,
+    )
+    const migrated = migratePersistedState(
+      { schemaVersion: 1, dimensionsByWorkspace: { ws_1: custom } },
+      1,
+    )
+
+    expect(
+      migrated.dimensionsByWorkspace.ws_1.find(
+        (entry) => entry.id === BUILTIN_DIMENSION.importance,
+      )?.comparativeQuestion,
+    ).toBe('Which one would I regret dropping?')
   })
 
   it('keeps the data in a current snapshot', () => {

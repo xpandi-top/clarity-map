@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { BUILTIN_DIMENSION, createDefaultDimensions } from '../domain/defaults'
+import { backfillBuiltInPrompts } from '../domain/prompts'
 import { createRankAxis, isRankAxis, rankedDimensionId } from '../domain/rankingAxis'
 import { evaluateRules } from '../domain/rules'
 import type { Dimension, RuleSuggestion, Thought } from '../domain/types'
@@ -50,7 +51,10 @@ export function useDimensions(): Dimension[] {
   return useMemo(() => {
     if (!currentId) return EMPTY
     const dimensions = byWorkspace[currentId]
-    return dimensions && dimensions.length > 0 ? dimensions : createDefaultDimensions()
+    if (!dimensions || dimensions.length === 0) return createDefaultDimensions()
+    // Idempotent, so wording stays right even for a snapshot that reached the
+    // current schema version without the migration having run over it.
+    return backfillBuiltInPrompts(dimensions, createDefaultDimensions())
   }, [byWorkspace, currentId])
 }
 

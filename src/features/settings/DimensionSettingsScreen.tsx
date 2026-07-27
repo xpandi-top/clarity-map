@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ConfirmButton } from '../../components/common/ConfirmButton'
 import { DimensionCreateDialog } from '../../components/dimensions/DimensionCreateDialog'
 import { createId } from '../../domain/ids'
+import { suggestComparativeQuestion } from '../../domain/prompts'
 import type { Dimension, DimensionKind, DimensionStage } from '../../domain/types'
 import { useDimensions, useStore } from '../../store'
 
@@ -135,13 +136,29 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
       </div>
 
       <div className="field">
-        <label htmlFor={`question-${dimension.id}`}>Question</label>
+        <label htmlFor={`question-${dimension.id}`}>Question about one thought</label>
         <input
           id={`question-${dimension.id}`}
           className="input"
           value={dimension.question}
           onChange={(event) => patch({ question: event.target.value })}
         />
+        <span className="faint">Asked in the review screens and the detail panel.</span>
+      </div>
+
+      <div className="field">
+        <label htmlFor={`compare-question-${dimension.id}`}>Question when comparing two</label>
+        <input
+          id={`compare-question-${dimension.id}`}
+          className="input"
+          value={dimension.comparativeQuestion ?? ''}
+          placeholder={suggestComparativeQuestion(dimension.name)}
+          onChange={(event) => patch({ comparativeQuestion: event.target.value })}
+        />
+        <span className="faint">
+          Asked on the Compare screen. A question written for one thought reads as nonsense next
+          to two, so this is kept separate. Left blank, the placeholder is used.
+        </span>
       </div>
 
       <div className="field">

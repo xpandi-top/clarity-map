@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmButton } from '../../components/common/ConfirmButton'
 import { BUILTIN_DIMENSION, THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
@@ -10,7 +10,8 @@ import {
   type ComparisonMode,
 } from '../../domain/comparisons'
 import { computeMatrixPoints, type QuadrantId, quadrantTitle } from '../../domain/matrix'
-import type { ThoughtType } from '../../domain/types'
+import { comparativePrompt } from '../../domain/prompts'
+import type { PairwiseComparison, ThoughtType } from '../../domain/types'
 import {
   useActiveDimensions,
   useComparisons,
@@ -75,6 +76,28 @@ export function CompareScreen() {
       dimension ? rankByScore(scoreComparisons(subsetIds, comparisons, dimension.id)) : [],
     [subsetIds, comparisons, dimension],
   )
+
+  // Comparing is repetitive, so the whole round is reachable from the keyboard.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      if (!dimension || !pair) return
+
+      const choose = (result: PairwiseComparison['result']) => {
+        event.preventDefault()
+        recordComparison(dimension.id, pair[0], pair[1], result)
+      }
+
+      if (event.key === 'ArrowLeft') choose('left')
+      else if (event.key === 'ArrowRight') choose('right')
+      else if (event.key === '=' || event.key === ' ') choose('tie')
+      else if (event.key.toLowerCase() === 's') choose('skipped')
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [dimension, pair, recordComparison])
 
   if (!dimension) {
     return <p className="empty-state">No comparable dimensions are active.</p>
@@ -163,14 +186,33 @@ export function CompareScreen() {
         </div>
       </div>
 
-      <p className="muted" role="status">
-        {progress.completed} completed · {progress.skipped} skipped · {progress.remaining}{' '}
-        remaining · {subset.length} thoughts in this set
-      </p>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
+        <progress
+          className="compare-progress"
+          max={Math.max(1, progress.total)}
+          value={progress.completed + progress.skipped}
+          aria-label="Comparison progress"
+        />
+        <p className="muted" style={{ margin: 0 }} role="status" aria-live="polite">
+          {progress.remaining === 0
+            ? `Nothing left to compare in this mode · ${progress.completed} recorded`
+            : `${progress.completed} of ${progress.total} compared · ${progress.remaining} to go`}
+          {progress.skipped > 0 ? ` · ${progress.skipped} skipped` : null}
+          {` · ${subset.length} thoughts in this set`}
+        </p>
+      </div>
 
       {pair ? (
         <div className="stack">
-          <h2>{dimension.question}</h2>
+          <div>
+            {/* Comparative wording, not the single-thought question. */}
+            <h2 style={{ marginBottom: 'var(--space-1)' }}>{comparativePrompt(dimension)}</h2>
+            {dimension.description ? (
+              <p className="faint" style={{ margin: 0 }}>
+                {dimension.description}
+              </p>
+            ) : null}
+          </div>
           <div className="compare-pair">
             {[0, 1].map((side) => {
               const thought = byId.get(pair[side])
@@ -181,27 +223,30 @@ export function CompareScreen() {
                   className="compare-option"
                   onClick={() => record(side === 0 ? 'left' : 'right')}
                 >
-                  {thought?.text ?? 'Unknown thought'}
+                  <span className="compare-option__key faint">{side === 0 ? '←' : '→'}</span>
+                  <span>{thought?.text ?? 'Unknown thought'}</span>
                 </button>
               )
             })}
           </div>
           <div className="row">
             <button type="button" className="button" onClick={() => record('tie')}>
-              About the same
+              About the same <span className="faint">(=)</span>
             </button>
-            <button type="button" className="button" onClick={() => record('skipped')}>
-              Cannot compare
-            </button>
+            {/* "Cannot compare" used to sit here doing exactly what Skip does.
+                One control, one outcome. */}
             <button
               type="button"
               className="button button--quiet"
               onClick={() => record('skipped')}
             >
-              Skip
+              Skip this pair <span className="faint">(S)</span>
             </button>
           </div>
-          <p className="faint">Skipped rounds never affect the ranking.</p>
+          <p className="faint">
+            Arrow keys choose a side. Skipped pairs never affect the ranking, and you can stop
+            whenever you like.
+          </p>
         </div>
       ) : (
         <p className="empty-state">

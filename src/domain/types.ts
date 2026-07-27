@@ -62,7 +62,15 @@ export interface DimensionOption {
 export interface Dimension {
   id: string
   name: string
+  /** Asked about a single thought: "Is this important to you?" */
   question: string
+  /**
+   * Asked when weighing two thoughts against each other: "Which one matters
+   * more to you?". A single-thought question reads as nonsense on the Compare
+   * screen, so the two are kept apart. Optional — `comparativePrompt` falls
+   * back to a generated phrasing.
+   */
+  comparativeQuestion?: string
   description?: string
   kind: DimensionKind
   options?: DimensionOption[]

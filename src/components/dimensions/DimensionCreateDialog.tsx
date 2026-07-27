@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Dialog } from '../common/Dialog'
 import { createId } from '../../domain/ids'
+import { suggestComparativeQuestion } from '../../domain/prompts'
 import type { DimensionKind, DimensionOption, DimensionStage } from '../../domain/types'
 import { useStore } from '../../store'
 
@@ -45,6 +46,7 @@ export function DimensionCreateDialog({
 
   const [name, setName] = useState('')
   const [question, setQuestion] = useState('')
+  const [comparativeQuestion, setComparativeQuestion] = useState('')
   const [description, setDescription] = useState('')
   const [kind, setKind] = useState<DimensionKind>('scale')
   const [stage, setStage] = useState<DimensionStage>('optional')
@@ -82,6 +84,8 @@ export function DimensionCreateDialog({
     const id = addDimension({
       name: trimmedName,
       question: question.trim() || `How would you rate ${trimmedName.toLowerCase()}?`,
+      comparativeQuestion:
+        comparativeQuestion.trim() || suggestComparativeQuestion(trimmedName),
       description: description.trim() || undefined,
       kind,
       options: usesOptions
@@ -143,7 +147,7 @@ export function DimensionCreateDialog({
         </div>
 
         <div className="field">
-          <label htmlFor="new-dimension-question">Question to ask about each thought</label>
+          <label htmlFor="new-dimension-question">Question about one thought</label>
           <input
             id="new-dimension-question"
             className="input"
@@ -151,6 +155,22 @@ export function DimensionCreateDialog({
             placeholder="Optional — one is written for you if you leave this blank."
             onChange={(event) => setQuestion(event.target.value)}
           />
+        </div>
+
+        <div className="field">
+          <label htmlFor="new-dimension-compare">Question when comparing two</label>
+          <input
+            id="new-dimension-compare"
+            className="input"
+            value={comparativeQuestion}
+            placeholder={
+              suggestComparativeQuestion(trimmedName) || 'Which one would you put higher?'
+            }
+            onChange={(event) => setComparativeQuestion(event.target.value)}
+          />
+          <span className="faint">
+            Used on the Compare screen, where a single-thought question would not make sense.
+          </span>
         </div>
 
         <div className="field">

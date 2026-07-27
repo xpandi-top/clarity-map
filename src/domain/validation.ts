@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION } from './schema'
-import { THOUGHT_TYPES, RELATION_TYPES } from './defaults'
+import { THOUGHT_TYPES, RELATION_TYPES, createDefaultDimensions } from './defaults'
+import { backfillBuiltInPrompts } from './prompts'
 import type {
   Dimension,
   ExportEnvelope,
@@ -67,6 +68,8 @@ function coerceDimension(raw: unknown): Dimension | null {
     id,
     name,
     question: str(raw.question, name),
+    comparativeQuestion:
+      typeof raw.comparativeQuestion === 'string' ? raw.comparativeQuestion : undefined,
     description: typeof raw.description === 'string' ? raw.description : undefined,
     kind: raw.kind as Dimension['kind'],
     options: Array.isArray(raw.options)
@@ -222,11 +225,16 @@ export function validateImport(input: unknown): ValidationResult<ExportEnvelope>
           .map((thought) => coerceThought(thought, workspace.id))
           .filter((thought): thought is Thought => thought !== null)
       : []
-    const dimensions = Array.isArray(entry.dimensions)
-      ? entry.dimensions
-          .map(coerceDimension)
-          .filter((dimension): dimension is Dimension => dimension !== null)
-      : []
+    // Files exported before schema 2 have no comparative questions; give the
+    // built-ins the wording that ships with the app.
+    const dimensions = backfillBuiltInPrompts(
+      Array.isArray(entry.dimensions)
+        ? entry.dimensions
+            .map(coerceDimension)
+            .filter((dimension): dimension is Dimension => dimension !== null)
+        : [],
+      createDefaultDimensions(),
+    )
     if (dimensions.length === 0) {
       errors.push(`Workspace “${workspace.name}” has no dimensions.`)
       return

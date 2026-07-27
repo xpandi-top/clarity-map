@@ -535,6 +535,9 @@
 }
 
 .compare-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   padding: var(--space-5);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
@@ -543,6 +546,37 @@
   text-align: left;
   font-size: 1.05rem;
   min-height: 7rem;
+}
+
+.compare-option__key {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.compare-progress {
+  width: 100%;
+  height: 0.4rem;
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.compare-progress::-webkit-progress-bar {
+  background: var(--surface-sunken);
+  border-radius: 999px;
+}
+
+.compare-progress::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.compare-progress::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: 999px;
 }
 
 .compare-option:hover {

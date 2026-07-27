@@ -61,7 +61,10 @@ simply information about where the pull is coming from.
   axis to the new dimension. Built-in dimensions can be disabled but not
   deleted.
 - **Pairwise comparison** — quick, complete, and manual modes over any
-  dimension or subset, with a live ranking. Skipped rounds never affect scores.
+  dimension or subset, with a live ranking and a progress bar. Each dimension
+  carries its own comparative wording ("Which one matters more to you?") rather
+  than reusing the question written for a single thought. Arrow keys pick a
+  side, `=` calls it even, `S` skips. Skipped rounds never affect scores.
 - **Thought classification** — a diagram of how the types feed into one
   another, in a simplified five-type view or the full thirteen, with counts,
   per-type detail, multi-select filtering of the list by type, and a
@@ -201,11 +204,14 @@ Export produces a JSON file:
 ```json
 {
   "app": "clarity-map",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exportedAt": "ISO_DATE",
   "data": { "workspaces": [] }
 }
 ```
+
+Files exported at schema version 1 still import; built-in dimensions in them
+are given the comparative wording that ships with the app.
 
 Import parses the file safely, checks the application identifier and schema
 version, coerces every record, shows a preview, and lets you merge or replace.

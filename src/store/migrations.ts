@@ -1,3 +1,5 @@
+import { createDefaultDimensions } from '../domain/defaults'
+import { backfillBuiltInPrompts } from '../domain/prompts'
 import { SCHEMA_VERSION } from '../domain/schema'
 import { createInitialDataState } from './initialState'
 import type { DataState } from './types'
@@ -19,6 +21,18 @@ export function migratePersistedState(persisted: unknown, version: number): Data
   // Step 0 → 1: snapshots written before versioning existed.
   if (from < 1) {
     state = { ...state, schemaVersion: 1 }
+  }
+
+  // Step 1 → 2: built-in dimensions gained a comparative question. Without
+  // this, existing workspaces fall back to generated wording on the Compare
+  // screen even though better wording ships with the app.
+  if (from < 2) {
+    const defaults = createDefaultDimensions()
+    const dimensionsByWorkspace: DataState['dimensionsByWorkspace'] = {}
+    for (const [workspaceId, dimensions] of Object.entries(state.dimensionsByWorkspace ?? {})) {
+      dimensionsByWorkspace[workspaceId] = backfillBuiltInPrompts(dimensions, defaults)
+    }
+    state = { ...state, dimensionsByWorkspace }
   }
 
   // Future steps go here, each guarded by the version it upgrades from.
