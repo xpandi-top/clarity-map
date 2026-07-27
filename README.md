@@ -71,11 +71,13 @@ simply information about where the pull is coming from.
   real, connected thoughts. No AI involved.
 - **Action assessment** — difficulty, priority, impact, energy effect, urgency,
   estimated minutes, and practical flags, with filters and a "Next actions" view.
-- **Editable roadmap** — an index with search, type filters, and how much sits
-  above and below each thought, then a laid-out graph you can rearrange by
-  dragging, with new relationships drawn between node handles, edge deletion,
-  zoom, pan, minimap, direction and depth controls, a colour-and-line-pattern
-  legend that doubles as a filter, and a full list alternative. Relationships
+- **Editable roadmap** — an index that lists the top of each structure by
+  default, with search, type filters, and how much sits above and below each
+  thought. Opening one gives a laid-out graph you can rearrange by dragging,
+  with new relationships drawn between node handles, edge deletion, zoom, pan,
+  minimap, a level limit (1, 2, 3, or all) that says how much it is hiding,
+  level badges on every node, a colour-and-line-pattern legend that doubles as
+  a filter, and a collapsible outline as the list alternative. Relationships
   are phrased for the direction they are drawn in, so a goal reads "has
   milestone X" downwards and X reads "is a milestone of" the goal upwards.
 - **Rules** — user-defined conditions that produce *suggestions only*. They are

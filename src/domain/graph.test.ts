@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   dedupeRelations,
+  depthsFrom,
   downstreamIds,
   findCycles,
   hierarchy,
+  rootIds,
   isDuplicateRelation,
   neighbourhoodIds,
   relationEndpoints,
@@ -121,6 +123,37 @@ describe('drawing a connection on the canvas', () => {
       sourceThoughtId: 'goal',
       targetThoughtId: 'action',
     })
+  })
+})
+
+describe('hierarchy levels', () => {
+  it('numbers each level beneath the root', () => {
+    const depths = depthsFrom(relations, 'wellbeing')
+    expect(depths.get('wellbeing')).toBe(0)
+    expect(depths.get('health')).toBe(1)
+    expect(depths.get('walk')).toBe(2)
+    expect(depths.get('stretching')).toBe(2)
+  })
+
+  it('numbers levels upwards when asked', () => {
+    const depths = depthsFrom(relations, 'walk', 'up')
+    expect(depths.get('walk')).toBe(0)
+    expect(depths.get('health')).toBe(1)
+    expect(depths.get('wellbeing')).toBe(2)
+  })
+
+  it('gives the shortest distance when a thought is reachable two ways', () => {
+    const shortcut = [...relations, makeRelation('walk', 'serves', 'wellbeing')]
+    expect(depthsFrom(shortcut, 'wellbeing').get('walk')).toBe(1)
+  })
+
+  it('leaves unreachable thoughts out entirely', () => {
+    expect(depthsFrom(relations, 'wellbeing').has('unrelated')).toBe(false)
+  })
+
+  it('finds the thoughts with nothing above them', () => {
+    const ids = ['walk', 'health', 'wellbeing', 'stretching', 'loose']
+    expect(rootIds(relations, ids).sort()).toEqual(['loose', 'wellbeing'])
   })
 })
 

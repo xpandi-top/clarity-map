@@ -34,13 +34,16 @@ export function CaptureScreen() {
   }
 
   return (
-    <div className="stack">
-      <div className="screen-header">
+    <div className="capture-page">
+      <header className="capture-page__header">
         <h1>Capture</h1>
-        <p>Record first, interpret later. Press Enter to keep a thought, Shift+Enter for a new line.</p>
-      </div>
+        <p>
+          Record first, interpret later. Press Enter to keep a thought, Shift+Enter for a new
+          line.
+        </p>
+      </header>
 
-      <div>
+      <div className="capture-page__composer">
         <label htmlFor="capture-input" className="visually-hidden">
           Write a thought
         </label>
@@ -58,42 +61,40 @@ export function CaptureScreen() {
             }
           }}
         />
-      </div>
-
-      <div className="spread">
-        <p className="muted" style={{ margin: 0 }}>
-          {thoughts.length} thought{thoughts.length === 1 ? '' : 's'} captured
-          {unresolved > 0 ? ` · ${unresolved} without a Want or Should answer` : null}
-        </p>
-        <div className="row">
-          {lastDeletion ? (
-            <button type="button" className="button button--small" onClick={undoDelete}>
-              Undo last deletion
-            </button>
-          ) : null}
-          <Link className="button button--primary" to="/review/importance">
-            Next: Review importance
-          </Link>
+        <div className="capture-page__meta">
+          <p className="muted" style={{ margin: 0 }} role="status" aria-live="polite">
+            {thoughts.length} thought{thoughts.length === 1 ? '' : 's'} captured
+            {unresolved > 0 ? ` · ${unresolved} without a Want or Should answer` : null}
+          </p>
+          <div className="row">
+            {lastDeletion ? (
+              <button type="button" className="button button--small" onClick={undoDelete}>
+                Undo last deletion
+              </button>
+            ) : null}
+            <Link className="button button--primary" to="/review/importance">
+              Next: Review importance
+            </Link>
+          </div>
         </div>
+        {unresolved > 0 ? (
+          <p className="faint" style={{ margin: 0 }}>
+            You can leave these unanswered and keep going. It is fine not to know yet.
+          </p>
+        ) : null}
       </div>
-
-      {unresolved > 0 ? (
-        <p className="faint">
-          You can leave these unanswered and keep going. It is fine not to know yet.
-        </p>
-      ) : null}
-
-      <ul className="capture-list">
-        {ordered.map((thought) => (
-          <li key={thought.id}>
-            <CaptureEntry thought={thought} />
-          </li>
-        ))}
-      </ul>
 
       {ordered.length === 0 ? (
         <p className="empty-state">Nothing captured yet. There is no correct number.</p>
-      ) : null}
+      ) : (
+        <ul className="capture-list">
+          {ordered.map((thought) => (
+            <li key={thought.id}>
+              <CaptureEntry thought={thought} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

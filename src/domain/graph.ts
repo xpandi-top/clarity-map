@@ -118,6 +118,44 @@ function traverse(adjacency: Adjacency, startId: string, maxDepth = Infinity): s
   return result
 }
 
+/**
+ * How many levels below (or above) the root each reachable thought sits.
+ * The root is 0. Used to show and limit the hierarchy rather than dumping a
+ * whole tree at once.
+ */
+export function depthsFrom(
+  relations: ThoughtRelation[],
+  rootId: string,
+  direction: 'up' | 'down' = 'down',
+): Map<string, number> {
+  const { up, down } = buildAdjacency(relations)
+  const adjacency = direction === 'up' ? up : down
+  const depths = new Map<string, number>([[rootId, 0]])
+  let frontier = [rootId]
+  let depth = 0
+
+  while (frontier.length > 0) {
+    depth += 1
+    const next: string[] = []
+    for (const id of frontier) {
+      for (const neighbour of adjacency.get(id) ?? []) {
+        if (depths.has(neighbour)) continue
+        depths.set(neighbour, depth)
+        next.push(neighbour)
+      }
+    }
+    frontier = next
+  }
+
+  return depths
+}
+
+/** Thoughts with nothing above them: the roots of each structure. */
+export function rootIds(relations: ThoughtRelation[], thoughtIds: string[]): string[] {
+  const { up } = buildAdjacency(relations)
+  return thoughtIds.filter((id) => (up.get(id)?.size ?? 0) === 0)
+}
+
 /** Thoughts this thought contributes to, walking upward. Excludes the start. */
 export function upstreamIds(
   relations: ThoughtRelation[],

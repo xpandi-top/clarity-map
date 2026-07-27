@@ -9,13 +9,16 @@ import {
   RELATION_TYPES,
   THOUGHT_TYPE_LABEL,
 } from '../../domain/defaults'
-import { neighbourhoodIds, relationEndpoints } from '../../domain/graph'
+import { depthsFrom, neighbourhoodIds, relationEndpoints } from '../../domain/graph'
 import { RELATION_STYLE } from '../../domain/relationStyle'
 import type { RelationType } from '../../domain/types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { useRelations, useStore, useThought, useThoughts } from '../../store'
 
 type Direction = 'both' | 'up' | 'down'
+
+/** Sentinel for the "no limit" entry in the levels picker. */
+const ALL_LEVELS = 99
 
 export function RoadmapScreen() {
   const { thoughtId = '' } = useParams()
@@ -30,7 +33,8 @@ export function RoadmapScreen() {
   const isNarrow = useMediaQuery('(max-width: 760px)')
   const [forceList, setForceList] = useState(false)
   const [direction, setDirection] = useState<Direction>('both')
-  const [expandAll, setExpandAll] = useState(true)
+  // Two levels keeps a large goal readable without hiding its shape.
+  const [depth, setDepth] = useState<number>(2)
   const [hiddenTypes, setHiddenTypes] = useState<RelationType[]>([])
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [showRelationEditor, setShowRelationEditor] = useState(false)
@@ -45,9 +49,20 @@ export function RoadmapScreen() {
     if (!focus) return []
     return neighbourhoodIds(visibleRelations, focus.id, {
       direction,
-      maxDepth: expandAll ? Infinity : 1,
+      maxDepth: depth >= ALL_LEVELS ? Infinity : depth,
     })
-  }, [visibleRelations, focus, direction, expandAll])
+  }, [visibleRelations, focus, direction, depth])
+
+  /** Levels below the thought in focus, shown on each node. */
+  const depthById = useMemo(
+    () => (focus ? depthsFrom(visibleRelations, focus.id, 'down') : new Map<string, number>()),
+    [visibleRelations, focus],
+  )
+
+  const deeperThanShown = useMemo(() => {
+    if (!focus || depth >= ALL_LEVELS) return 0
+    return [...depthById.values()].filter((level) => level > depth).length
+  }, [depthById, depth, focus])
 
   const subgraphThoughts = useMemo(
     () => thoughts.filter((thought) => includedIds.includes(thought.id)),
@@ -124,15 +139,18 @@ export function RoadmapScreen() {
           </select>
         </div>
         <div className="field">
-          <span className="label">Depth</span>
-          <button
-            type="button"
-            className="button"
-            aria-pressed={expandAll}
-            onClick={() => setExpandAll((value) => !value)}
+          <label htmlFor="roadmap-depth">Levels</label>
+          <select
+            id="roadmap-depth"
+            className="select"
+            value={String(depth)}
+            onChange={(event) => setDepth(Number(event.target.value))}
           >
-            {expandAll ? 'All connected' : 'One level'}
-          </button>
+            <option value="1">1 level</option>
+            <option value="2">2 levels</option>
+            <option value="3">3 levels</option>
+            <option value={String(ALL_LEVELS)}>All levels</option>
+          </select>
         </div>
         <div className="field">
           <span className="label">View</span>
@@ -204,18 +222,37 @@ export function RoadmapScreen() {
         })}
       </fieldset>
 
+      {deeperThanShown > 0 ? (
+        <p className="notice" role="status">
+          {deeperThanShown === 1
+            ? `1 thought sits deeper than ${depth} level${depth === 1 ? '' : 's'} and is hidden.`
+            : `${deeperThanShown} thoughts sit deeper than ${depth} level${
+                depth === 1 ? '' : 's'
+              } and are hidden.`}{' '}
+          <button
+            type="button"
+            className="button button--small"
+            onClick={() => setDepth(ALL_LEVELS)}
+          >
+            Show all levels
+          </button>
+        </p>
+      ) : null}
+
       {listMode ? (
         <RoadmapList
           thoughts={subgraphThoughts}
           relations={subgraphRelations}
           focusId={focus.id}
           onSelectThought={selectThought}
+          initialDepth={depth >= ALL_LEVELS ? 2 : depth}
         />
       ) : (
         <RoadmapFlow
           thoughts={subgraphThoughts}
           relations={subgraphRelations}
           focusId={focus.id}
+          depthById={depthById}
           selectedEdgeId={selectedEdgeId}
           onSelectThought={selectThought}
           onSelectEdge={setSelectedEdgeId}

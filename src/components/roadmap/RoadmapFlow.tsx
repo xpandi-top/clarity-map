@@ -46,6 +46,8 @@ interface RoadmapFlowProps {
   thoughts: Thought[]
   relations: ThoughtRelation[]
   focusId: string
+  /** Levels below the thought in focus, shown on each node. */
+  depthById: Map<string, number>
   selectedEdgeId: string | null
   onSelectThought: (thoughtId: string) => void
   onSelectEdge: (edgeId: string | null) => void
@@ -70,6 +72,7 @@ function buildNodes(
   thoughts: Thought[],
   relations: ThoughtRelation[],
   focusId: string,
+  depthById: Map<string, number>,
   savedPositions: Map<string, { x: number; y: number }>,
 ): RoadmapNode[] {
   // Edges run from the higher-level thought downwards, which is the direction
@@ -84,6 +87,7 @@ function buildNodes(
 
   return thoughts.map((thought) => {
     const priority = thought.dimensionValues[BUILTIN_DIMENSION.priority]
+    const level = depthById.get(thought.id)
     return {
       id: thought.id,
       type: 'roadmap',
@@ -93,7 +97,7 @@ function buildNodes(
         label: thought.text,
         meta: [
           THOUGHT_TYPE_LABEL[thought.type],
-          thought.status,
+          level !== undefined && level > 0 ? `Level ${level}` : null,
           typeof priority === 'number' ? `Priority ${priority}` : null,
         ]
           .filter(Boolean)
@@ -149,6 +153,7 @@ function RoadmapCanvas({
   thoughts,
   relations,
   focusId,
+  depthById,
   selectedEdgeId,
   onSelectThought,
   onSelectEdge,
@@ -163,7 +168,7 @@ function RoadmapCanvas({
   // Seeded from the computed layout; the effect below re-applies any positions
   // the user has since dragged.
   const [nodes, setNodes, onNodesChange] = useNodesState<RoadmapNode>(
-    buildNodes(thoughts, relations, focusId, new Map()),
+    buildNodes(thoughts, relations, focusId, depthById, new Map()),
   )
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(
     buildEdges(relations, selectedEdgeId),
@@ -184,7 +189,7 @@ function RoadmapCanvas({
   const nodeCount = nodes.length
 
   useEffect(() => {
-    setNodes(buildNodes(thoughts, relations, focusId, savedPositions.current))
+    setNodes(buildNodes(thoughts, relations, focusId, depthById, savedPositions.current))
     setEdges(buildEdges(relations, selectedEdgeId))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphSignature])

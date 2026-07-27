@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
-import { downstreamIds, upstreamIds } from '../../domain/graph'
+import { downstreamIds, rootIds, upstreamIds } from '../../domain/graph'
 import { filterThoughts } from '../../domain/selectors'
 import type { ThoughtType } from '../../domain/types'
 import { useRelations, useStore, useVisibleThoughts } from '../../store'
@@ -17,6 +17,13 @@ export function RoadmapIndexScreen() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<ThoughtType[]>([])
   const [onlyConnected, setOnlyConnected] = useState(true)
+  const [onlyRoots, setOnlyRoots] = useState(true)
+
+  /** Thoughts with nothing above them — the top of each structure. */
+  const roots = useMemo(
+    () => new Set(rootIds(relations, thoughts.map((thought) => thought.id))),
+    [relations, thoughts],
+  )
 
   /** How many thoughts sit above and below each thought. */
   const connections = useMemo(() => {
@@ -46,8 +53,9 @@ export function RoadmapIndexScreen() {
           return (entry?.above ?? 0) + (entry?.below ?? 0) > 0
         })
       : matching
+    const scoped = onlyRoots ? connected.filter((thought) => roots.has(thought.id)) : connected
 
-    return [...connected].sort((a, b) => {
+    return [...scoped].sort((a, b) => {
       const aEntry = connections.get(a.id)
       const bEntry = connections.get(b.id)
       // Biggest structures first — they are the ones worth opening.
@@ -59,7 +67,7 @@ export function RoadmapIndexScreen() {
       if (bTotal !== aTotal) return bTotal - aTotal
       return a.text.localeCompare(b.text)
     })
-  }, [thoughts, search, typeFilter, onlyConnected, connections])
+  }, [thoughts, search, typeFilter, onlyConnected, onlyRoots, roots, connections])
 
   const suggested = useMemo(
     () => listed.filter((thought) => STRUCTURAL_TYPES.includes(thought.type)).slice(0, 3),
@@ -113,12 +121,27 @@ export function RoadmapIndexScreen() {
         <button
           type="button"
           className="button"
+          aria-pressed={onlyRoots}
+          onClick={() => setOnlyRoots((value) => !value)}
+        >
+          Top of each structure only
+        </button>
+        <button
+          type="button"
+          className="button"
           aria-pressed={onlyConnected}
           onClick={() => setOnlyConnected((value) => !value)}
         >
           Only thoughts with relationships
         </button>
       </div>
+
+      {onlyRoots ? (
+        <p className="faint" style={{ margin: 0 }}>
+          Showing only thoughts with nothing above them, so each structure appears once. Every
+          thought beneath is reachable from its roadmap.
+        </p>
+      ) : null}
 
       <fieldset className="filter-bar" style={{ border: 'none', padding: 0, margin: 0 }}>
         <legend className="label">Filter by type</legend>
@@ -155,6 +178,15 @@ export function RoadmapIndexScreen() {
               : 'No thoughts match this filter.'}
           </p>
           <div className="row" style={{ justifyContent: 'center' }}>
+            {onlyRoots ? (
+              <button
+                type="button"
+                className="button button--small"
+                onClick={() => setOnlyRoots(false)}
+              >
+                Show every level
+              </button>
+            ) : null}
             {onlyConnected ? (
               <button
                 type="button"
