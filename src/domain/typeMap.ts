@@ -45,6 +45,56 @@ export function groupOf(type: ThoughtType): TypeGroup | null {
   return TYPE_GROUPS.find((group) => group.types.includes(type)) ?? null
 }
 
+export interface TypeGroupStyle {
+  /** Border and text colour. */
+  stroke: string
+  /** Background tint. */
+  fill: string
+  /** Short guideline shown while breaking a thought down. */
+  guideline: string
+}
+
+/**
+ * One colour per family, used on the roadmap, the type map, and the breakdown
+ * flow so the four kinds of thought stay recognisable across screens. Always
+ * paired with the family name in text — never colour alone.
+ */
+export const TYPE_GROUP_STYLE: Record<TypeGroup['id'] | 'none', TypeGroupStyle> = {
+  direction: {
+    stroke: '#6d5a86',
+    fill: '#f1eef5',
+    guideline: 'Say where you are heading. No finish line, so do not phrase it as done.',
+  },
+  results: {
+    stroke: '#4d6182',
+    fill: '#eaeef4',
+    guideline: 'Describe a finished state you could check. A result, not an activity.',
+  },
+  work: {
+    stroke: '#4a6b63',
+    fill: '#e6eeeb',
+    guideline: 'Say what you would actually do. Startable, or repeatable.',
+  },
+  open: {
+    stroke: '#8a6d3b',
+    fill: '#f7efe0',
+    guideline: 'Park it as it is. Naming the question is enough for now.',
+  },
+  none: {
+    stroke: '#8f8981',
+    fill: '#f3f1ec',
+    guideline: 'Not classified yet, which is a valid place to leave it.',
+  },
+}
+
+export function styleOfType(type: ThoughtType): TypeGroupStyle {
+  return TYPE_GROUP_STYLE[groupOf(type)?.id ?? 'none']
+}
+
+export function groupLabelOfType(type: ThoughtType): string {
+  return groupOf(type)?.label ?? 'Unclassified'
+}
+
 /** Longer explanation shown when a type is selected in the map. */
 export const TYPE_LONG_DESCRIPTION: Record<ThoughtType, string> = {
   unclassified:

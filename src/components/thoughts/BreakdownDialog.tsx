@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Dialog } from '../common/Dialog'
 import { RELATION_LABEL, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import {
+  TYPE_GROUPS,
+  TYPE_GROUP_STYLE,
+  groupLabelOfType,
+  styleOfType,
+} from '../../domain/typeMap'
 import type { RelationType, ThoughtType } from '../../domain/types'
 import { useStore, useThought, useRelations, useThoughts } from '../../store'
 
@@ -112,6 +118,11 @@ const TEMPLATES: Record<TemplateId, { label: string; shape: string; steps: Step[
   },
 }
 
+/** "an outcome", but "a project". */
+function article(word: string): string {
+  return 'aeiou'.includes(word[0]?.toLowerCase() ?? '') ? 'an' : 'a'
+}
+
 function defaultTemplate(type: ThoughtType): TemplateId {
   if (type === 'habit') return 'habit'
   if (type === 'decision') return 'decision'
@@ -180,6 +191,31 @@ export function BreakdownDialog({
           <p className="faint">{THOUGHT_TYPE_LABEL[focus.type]}</p>
         </div>
 
+        <div className="notice">
+          <p className="label" style={{ marginBottom: 'var(--space-2)' }}>
+            The four families, in the order a breakdown usually moves through them
+          </p>
+          <ul className="row group-legend" style={{ marginBottom: 'var(--space-2)' }}>
+            {TYPE_GROUPS.map((group) => (
+              <li
+                key={group.id}
+                className="chip"
+                style={{
+                  borderColor: TYPE_GROUP_STYLE[group.id].stroke,
+                  background: TYPE_GROUP_STYLE[group.id].fill,
+                  color: TYPE_GROUP_STYLE[group.id].stroke,
+                }}
+              >
+                {group.label}
+              </li>
+            ))}
+          </ul>
+          <p className="faint" style={{ margin: 0 }}>
+            Direction says where you are heading, results say what done looks like, work is what
+            you actually do, and anything still open can stay a question.
+          </p>
+        </div>
+
         <div className="field">
           <label htmlFor="breakdown-template">Template</label>
           <select
@@ -196,12 +232,27 @@ export function BreakdownDialog({
           </select>
         </div>
 
-        {template.steps.map((step, index) => (
+        {template.steps.map((step, index) => {
+          const style = styleOfType(step.type)
+          return (
           <div key={step.prompt} className="field">
             <label htmlFor={`breakdown-step-${index}`}>{step.prompt}</label>
+            <span className="row" style={{ gap: 'var(--space-2)' }}>
+              <span
+                className="chip"
+                style={{
+                  borderColor: style.stroke,
+                  background: style.fill,
+                  color: style.stroke,
+                }}
+              >
+                {groupLabelOfType(step.type)} · {THOUGHT_TYPE_LABEL[step.type]}
+              </span>
+            </span>
             <span className="faint">
-              {step.helper} Creates a {THOUGHT_TYPE_LABEL[step.type].toLowerCase()} that{' '}
-              {RELATION_LABEL[step.relation]} this thought.
+              {style.guideline} {step.helper} Creates {article(THOUGHT_TYPE_LABEL[step.type])}{' '}
+              {THOUGHT_TYPE_LABEL[step.type].toLowerCase()} that {RELATION_LABEL[step.relation]}{' '}
+              this thought.
             </span>
             <div className="row" style={{ flexWrap: 'nowrap' }}>
               <input
@@ -228,7 +279,8 @@ export function BreakdownDialog({
               </button>
             </div>
           </div>
-        ))}
+          )
+        })}
 
         <div className="panel-section">
           <h3>Created beneath this thought</h3>

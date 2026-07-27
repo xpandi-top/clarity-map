@@ -8,6 +8,17 @@ import {
 import type { Thought } from '../../domain/types'
 import { useStore, useVisibleThoughts } from '../../store'
 
+type MotivationFilter = 'all' | 'want' | 'should' | 'unanswered'
+
+const FILTER_LABEL: Record<MotivationFilter, string> = {
+  all: 'All',
+  want: 'Want',
+  should: 'Should',
+  unanswered: 'Not answered',
+}
+
+const FILTERS: MotivationFilter[] = ['all', 'want', 'should', 'unanswered']
+
 export function CaptureScreen() {
   const thoughts = useVisibleThoughts()
   const addThought = useStore((state) => state.addThought)
@@ -15,6 +26,8 @@ export function CaptureScreen() {
   const undoDelete = useStore((state) => state.undoDelete)
 
   const [draft, setDraft] = useState('')
+  const [search, setSearch] = useState('')
+  const [motivationFilter, setMotivationFilter] = useState<MotivationFilter>('all')
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const ordered = useMemo(
@@ -22,9 +35,36 @@ export function CaptureScreen() {
     [thoughts],
   )
 
-  const unresolved = thoughts.filter(
-    (thought) => thought.dimensionValues[BUILTIN_DIMENSION.motivation] === undefined,
-  ).length
+  const counts = useMemo(() => {
+    const tally: Record<MotivationFilter, number> = {
+      all: thoughts.length,
+      want: 0,
+      should: 0,
+      unanswered: 0,
+    }
+    for (const thought of thoughts) {
+      const value = thought.dimensionValues[BUILTIN_DIMENSION.motivation]
+      if (value === MOTIVATION_WANT) tally.want += 1
+      else if (value === MOTIVATION_SHOULD) tally.should += 1
+      else tally.unanswered += 1
+    }
+    return tally
+  }, [thoughts])
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return ordered.filter((thought) => {
+      if (term && !thought.text.toLowerCase().includes(term)) return false
+      const value = thought.dimensionValues[BUILTIN_DIMENSION.motivation]
+      if (motivationFilter === 'want') return value === MOTIVATION_WANT
+      if (motivationFilter === 'should') return value === MOTIVATION_SHOULD
+      if (motivationFilter === 'unanswered') return value === undefined
+      return true
+    })
+  }, [ordered, search, motivationFilter])
+
+  const unresolved = counts.unanswered
+  const filtered = search.trim().length > 0 || motivationFilter !== 'all'
 
   const submit = () => {
     if (!draft.trim()) return
@@ -87,13 +127,67 @@ export function CaptureScreen() {
       {ordered.length === 0 ? (
         <p className="empty-state">Nothing captured yet. There is no correct number.</p>
       ) : (
-        <ul className="capture-list">
-          {ordered.map((thought) => (
-            <li key={thought.id}>
-              <CaptureEntry thought={thought} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="capture-page__filters">
+            <div className="field">
+              <label htmlFor="capture-search" className="visually-hidden">
+                Search your thoughts
+              </label>
+              <input
+                id="capture-search"
+                className="input"
+                value={search}
+                placeholder="Search what you have written"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <div className="row">
+              {FILTERS.map((entry) => (
+                <button
+                  key={entry}
+                  type="button"
+                  className="button button--small"
+                  aria-pressed={motivationFilter === entry}
+                  onClick={() => setMotivationFilter(entry)}
+                >
+                  {FILTER_LABEL[entry]} <span className="faint">{counts[entry]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtered ? (
+            <p className="faint" style={{ margin: 0 }} role="status" aria-live="polite">
+              Showing {visible.length} of {thoughts.length}
+            </p>
+          ) : null}
+
+          {visible.length === 0 ? (
+            <div className="empty-state stack">
+              <p style={{ margin: 0 }}>Nothing matches this filter.</p>
+              <div className="row" style={{ justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="button button--small"
+                  onClick={() => {
+                    setSearch('')
+                    setMotivationFilter('all')
+                  }}
+                >
+                  Clear filters
+                </button>
+              </div>
+            </div>
+          ) : (
+            <ul className="capture-list">
+              {visible.map((thought) => (
+                <li key={thought.id}>
+                  <CaptureEntry thought={thought} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   )

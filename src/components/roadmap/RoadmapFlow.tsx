@@ -21,19 +21,31 @@ import { BUILTIN_DIMENSION, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import { hierarchy, relationPhrase } from '../../domain/graph'
 import { RELATION_STYLE } from '../../domain/relationStyle'
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from '../../domain/roadmapLayout'
+import { groupLabelOfType, styleOfType } from '../../domain/typeMap'
 import type { Thought, ThoughtRelation } from '../../domain/types'
 
-type RoadmapNodeData = { label: string; meta: string; isFocus: boolean }
+type RoadmapNodeData = {
+  label: string
+  meta: string
+  isFocus: boolean
+  group: string
+  stroke: string
+  fill: string
+}
 type RoadmapNode = Node<RoadmapNodeData, 'roadmap'>
 
 function RoadmapNodeView({ data, selected }: NodeProps<RoadmapNode>) {
   return (
     <div
       className={`roadmap-node${data.isFocus ? ' is-focus' : ''}${selected ? ' is-selected' : ''}`}
+      // The family colour, always alongside the family name in the meta line.
+      style={{ borderLeft: `4px solid ${data.stroke}`, background: data.fill }}
     >
       <Handle type="target" position={Position.Top} className="roadmap-handle" />
       <div>{data.label}</div>
-      <div className="roadmap-node__meta">{data.meta}</div>
+      <div className="roadmap-node__meta">
+        <span style={{ color: data.stroke }}>{data.group}</span> · {data.meta}
+      </div>
       <Handle type="source" position={Position.Bottom} className="roadmap-handle" />
     </div>
   )
@@ -88,6 +100,7 @@ function buildNodes(
   return thoughts.map((thought) => {
     const priority = thought.dimensionValues[BUILTIN_DIMENSION.priority]
     const level = depthById.get(thought.id)
+    const style = styleOfType(thought.type)
     return {
       id: thought.id,
       type: 'roadmap',
@@ -103,6 +116,9 @@ function buildNodes(
           .filter(Boolean)
           .join(' · '),
         isFocus: thought.id === focusId,
+        group: groupLabelOfType(thought.type),
+        stroke: style.stroke,
+        fill: thought.id === focusId ? style.fill : 'var(--surface-raised)',
       },
     }
   })

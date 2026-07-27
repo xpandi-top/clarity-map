@@ -9,6 +9,8 @@ import {
   TYPE_MAP_WIDTH,
   TYPE_NODE_HEIGHT,
   TYPE_NODE_WIDTH,
+  groupLabelOfType,
+  styleOfType,
   type TypeMapEdge,
   type TypeMapNode,
 } from '../../domain/typeMap'
@@ -120,13 +122,14 @@ export function TypeMapDiagram({
       {nodes.map((node) => {
         const isSelected = selected === node.type
         const count = counts[node.type] ?? 0
+        const style = styleOfType(node.type)
         return (
           <g
             key={node.type}
             role="button"
             tabIndex={0}
             aria-pressed={isSelected}
-            aria-label={`${THOUGHT_TYPE_LABEL[node.type]}, ${count} thought${count === 1 ? '' : 's'}`}
+            aria-label={`${THOUGHT_TYPE_LABEL[node.type]}, ${groupLabelOfType(node.type)}, ${count} thought${count === 1 ? '' : 's'}`}
             className={`type-map__node${isSelected ? ' is-selected' : ''}`}
             onClick={() => onSelect(node.type)}
             onKeyDown={(event) => {
@@ -142,6 +145,8 @@ export function TypeMapDiagram({
               width={TYPE_NODE_WIDTH}
               height={TYPE_NODE_HEIGHT}
               rx={8}
+              fill={style.fill}
+              stroke={style.stroke}
             />
             <text
               x={node.x + TYPE_NODE_WIDTH / 2}

@@ -38,7 +38,8 @@ simply information about where the pull is coming from.
 
 - **Workspaces** — create, rename, duplicate, clear, and delete them; all local.
 - **Free-form capture** — Enter keeps a thought, Shift+Enter adds a line break,
-  the input clears and refocuses, and the last deletion can be undone.
+  the input clears and refocuses, and the last deletion can be undone. Search
+  and filter by Want, Should, or not answered yet.
 - **Want vs Should** — asked once per thought, with `W` / `S` / `Esc` shortcuts,
   never blocking.
 - **Importance review** — one thought at a time, filtered by whether a thought
@@ -68,7 +69,11 @@ simply information about where the pull is coming from.
   roadmap. Exact duplicates are rejected and loops are reported rather than
   silently blocked.
 - **Manual goal breakdown** — goal, habit, and decision templates that create
-  real, connected thoughts. No AI involved.
+  real, connected thoughts, each step labelled with the family it belongs to
+  and how to phrase that kind of thought. No AI involved.
+- **Checklist export** — turn a finished roadmap into a Markdown checklist,
+  nested or flattened to actions and habits only, with completed thoughts
+  already ticked. Copy it, download it as `.md`, or print it.
 - **Action assessment** — difficulty, priority, impact, energy effect, urgency,
   estimated minutes, and practical flags, with filters and a "Next actions" view.
 - **Editable roadmap** — an index that lists the top of each structure by

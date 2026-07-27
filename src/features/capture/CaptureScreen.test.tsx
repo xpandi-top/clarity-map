@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { CaptureScreen } from './CaptureScreen'
@@ -49,10 +49,51 @@ describe('CaptureScreen', () => {
     renderScreen()
 
     await user.type(screen.getByLabelText('Write a thought'), 'Learn photography{Enter}')
-    await user.click(screen.getByRole('button', { name: /^Want/ }))
+    // Scoped to the thought's own control group, since the filter bar also
+    // has a Want button.
+    const controls = within(screen.getByRole('group', { name: /Learn photography/ }))
+    await user.click(controls.getByRole('button', { name: /^Want/ }))
 
     const thought = useStore.getState().thoughts[0]
     expect(thought.dimensionValues[BUILTIN_DIMENSION.motivation]).toBe(MOTIVATION_WANT)
+  })
+
+  it('filters the list by Want, Should, and unanswered', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+
+    const input = screen.getByLabelText('Write a thought')
+    await user.type(input, 'Learn photography{Enter}')
+    await user.type(input, 'Renew the insurance{Enter}')
+
+    const wanted = within(screen.getByRole('group', { name: /Learn photography/ }))
+    await user.click(wanted.getByRole('button', { name: /^Want/ }))
+
+    await user.click(screen.getByRole('button', { name: /^Want 1/ }))
+    expect(screen.getByText('Learn photography')).toBeInTheDocument()
+    expect(screen.queryByText('Renew the insurance')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^Not answered 1/ }))
+    expect(screen.getByText('Renew the insurance')).toBeInTheDocument()
+    expect(screen.queryByText('Learn photography')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^All 2/ }))
+    expect(screen.getByText('Learn photography')).toBeInTheDocument()
+    expect(screen.getByText('Renew the insurance')).toBeInTheDocument()
+  })
+
+  it('searches what has been written', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+
+    const input = screen.getByLabelText('Write a thought')
+    await user.type(input, 'Learn photography{Enter}')
+    await user.type(input, 'Renew the insurance{Enter}')
+
+    await user.type(screen.getByPlaceholderText('Search what you have written'), 'insur')
+    expect(screen.getByText('Renew the insurance')).toBeInTheDocument()
+    expect(screen.queryByText('Learn photography')).not.toBeInTheDocument()
+    expect(screen.getByText('Showing 1 of 2')).toBeInTheDocument()
   })
 
   it('deletes a thought and offers an undo that restores it', async () => {

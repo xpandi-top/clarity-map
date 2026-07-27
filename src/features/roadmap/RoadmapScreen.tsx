@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { ChecklistDialog } from '../../components/roadmap/ChecklistDialog'
 import { RoadmapFlow } from '../../components/roadmap/RoadmapFlow'
 import { RoadmapList } from '../../components/roadmap/RoadmapList'
 import { RelationEditor } from '../../components/thoughts/RelationEditor'
@@ -39,6 +40,7 @@ export function RoadmapScreen() {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [showRelationEditor, setShowRelationEditor] = useState(false)
   const [connectType, setConnectType] = useState<RelationType>('serves')
+  const [showChecklist, setShowChecklist] = useState(false)
 
   const visibleRelations = useMemo(
     () => relations.filter((relation) => !hiddenTypes.includes(relation.type)),
@@ -115,6 +117,9 @@ export function RoadmapScreen() {
           <Link className="button button--primary" to="/roadmap">
             All roadmaps
           </Link>
+          <button type="button" className="button" onClick={() => setShowChecklist(true)}>
+            Checklist
+          </button>
           <button type="button" className="button" onClick={() => selectThought(focus.id)}>
             Open details
           </button>
@@ -341,6 +346,18 @@ export function RoadmapScreen() {
           </div>
         </details>
       )}
+
+      {showChecklist ? (
+        <ChecklistDialog
+          // The whole structure beneath, not just the levels currently shown.
+          thoughts={thoughts}
+          relations={relations}
+          rootId={focus.id}
+          rootText={focus.text}
+          onClose={() => setShowChecklist(false)}
+          onCopied={showToast}
+        />
+      ) : null}
     </div>
   )
 }

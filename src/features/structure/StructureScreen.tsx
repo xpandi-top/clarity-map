@@ -16,6 +16,7 @@ import { filterThoughts } from '../../domain/selectors'
 import {
   SIMPLE_TYPES,
   TYPE_GROUPS,
+  TYPE_GROUP_STYLE,
   TYPE_LONG_DESCRIPTION,
   TYPE_MAP_SENTENCE,
   groupOf,
@@ -167,7 +168,25 @@ export function StructureScreen() {
           counts={countsByType}
         />
 
+        <ul className="row group-legend">
+          {TYPE_GROUPS.map((group) => (
+            <li
+              key={group.id}
+              className="chip"
+              style={{
+                borderColor: TYPE_GROUP_STYLE[group.id].stroke,
+                background: TYPE_GROUP_STYLE[group.id].fill,
+                color: TYPE_GROUP_STYLE[group.id].stroke,
+              }}
+              title={group.summary}
+            >
+              {group.label}
+            </li>
+          ))}
+        </ul>
+
         <p className="faint">
+          Colours group the types into families, and the same colours appear on the roadmap.
           Select a box to read what that type means. Solid arrows break a thought down a level;
           dashed arrows are what a thought often turns into once it is clearer.
           {simplifiedMap

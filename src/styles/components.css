@@ -288,6 +288,64 @@
   padding: 0;
 }
 
+/* ---------- Type group legend ---------- */
+
+.group-legend {
+  gap: var(--space-2);
+}
+
+.group-legend li {
+  font-size: 0.78rem;
+}
+
+/* ---------- Checklist ---------- */
+
+.checklist-source {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+/* Hidden on screen; the only thing that reaches the printer. */
+.checklist-print {
+  display: none;
+}
+
+.checklist-print__box {
+  font-size: 1.1em;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .checklist-print,
+  .checklist-print * {
+    visibility: visible;
+  }
+
+  .checklist-print {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    color: #000;
+    background: #fff;
+  }
+
+  .checklist-print li {
+    list-style: none;
+    line-height: 1.9;
+    break-inside: avoid;
+  }
+}
+
 /* ---------- Table ---------- */
 
 .table-scroll {
