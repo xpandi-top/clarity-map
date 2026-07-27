@@ -17,7 +17,8 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { BUILTIN_DIMENSION, RELATION_LABEL, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import { BUILTIN_DIMENSION, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import { hierarchy, relationPhrase } from '../../domain/graph'
 import { RELATION_STYLE } from '../../domain/relationStyle'
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from '../../domain/roadmapLayout'
 import type { Thought, ThoughtRelation } from '../../domain/types'
@@ -53,6 +54,18 @@ interface RoadmapFlowProps {
   onDeleteRelations: (relationIds: string[]) => void
 }
 
+/**
+ * Which end of a relationship is drawn on top. `hierarchy` knows that
+ * `breaksDownInto` runs the opposite way to `serves` and friends; lateral
+ * relationships keep their stored order.
+ */
+function drawnDirection(relation: ThoughtRelation): { from: string; to: string } {
+  const levels = hierarchy(relation)
+  return levels
+    ? { from: levels.upper, to: levels.lower }
+    : { from: relation.sourceThoughtId, to: relation.targetThoughtId }
+}
+
 function buildNodes(
   thoughts: Thought[],
   relations: ThoughtRelation[],
@@ -63,10 +76,10 @@ function buildNodes(
   // the layout should flow.
   const positions = layoutGraph(
     thoughts.map((thought) => ({ id: thought.id, width: NODE_WIDTH, height: NODE_HEIGHT })),
-    relations.map((relation) => ({
-      source: relation.targetThoughtId,
-      target: relation.sourceThoughtId,
-    })),
+    relations.map((relation) => {
+      const { from, to } = drawnDirection(relation)
+      return { source: from, target: to }
+    }),
   )
 
   return thoughts.map((thought) => {
@@ -95,11 +108,14 @@ function buildEdges(relations: ThoughtRelation[], selectedEdgeId: string | null)
   return relations.map((relation) => {
     const style = RELATION_STYLE[relation.type]
     const isSelected = relation.id === selectedEdgeId
+    const { from, to } = drawnDirection(relation)
     return {
       id: relation.id,
-      source: relation.targetThoughtId,
-      target: relation.sourceThoughtId,
-      label: RELATION_LABEL[relation.type],
+      // Drawn from the higher-level thought downwards, so the label has to
+      // read in that direction too.
+      source: from,
+      target: to,
+      label: relationPhrase(relation, from),
       selected: isSelected,
       focusable: true,
       markerEnd: {

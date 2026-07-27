@@ -7,10 +7,11 @@ import {
   isDuplicateRelation,
   neighbourhoodIds,
   relationEndpoints,
+  relationPhrase,
   upstreamIds,
   wouldCreateCycle,
 } from './graph'
-import { RELATION_TYPES } from './defaults'
+import { RELATION_REVERSE_LABEL, RELATION_TYPES } from './defaults'
 import { makeRelation } from '../test/factories'
 
 // walk -> health -> wellbeing, and health breaks down into stretching.
@@ -54,6 +55,45 @@ describe('graph traversal', () => {
       'stretching',
       'walk',
     ])
+  })
+})
+
+describe('reading a relationship in a given direction', () => {
+  // The case from the bug report: a goal broken down into a milestone.
+  const loseWeight = 'loseWeight'
+  const reach45 = 'reach45'
+  const milestone = makeRelation(reach45, 'milestoneOf', loseWeight)
+
+  it('reads from the source with the stored phrasing', () => {
+    expect(relationPhrase(milestone, reach45)).toBe('is a milestone of')
+  })
+
+  it('reads from the target with the inverse phrasing', () => {
+    // Drawn top-down the sentence must not become "Lose weight is a
+    // milestone of Reach 45kg".
+    expect(relationPhrase(milestone, loseWeight)).toBe('has milestone')
+  })
+
+  it('has an inverse phrase for every relationship type', () => {
+    for (const type of RELATION_TYPES) {
+      expect(RELATION_REVERSE_LABEL[type]).toBeTruthy()
+      expect(RELATION_REVERSE_LABEL[type]).not.toBe('')
+    }
+  })
+
+  it('keeps symmetric relationships reading the same both ways', () => {
+    const lateral = makeRelation('a', 'relatedTo', 'b')
+    expect(relationPhrase(lateral, 'a')).toBe(relationPhrase(lateral, 'b'))
+  })
+
+  it('puts the milestone below the goal in the hierarchy', () => {
+    expect(hierarchy(milestone)).toEqual({ upper: loseWeight, lower: reach45 })
+  })
+
+  it('puts a breaksDownInto child below its parent', () => {
+    const breakdown = makeRelation(loseWeight, 'breaksDownInto', reach45)
+    expect(hierarchy(breakdown)).toEqual({ upper: loseWeight, lower: reach45 })
+    expect(relationPhrase(breakdown, loseWeight)).toBe('breaks down into')
   })
 })
 

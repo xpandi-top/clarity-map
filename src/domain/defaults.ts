@@ -90,12 +90,29 @@ export const RELATION_TYPES: RelationType[] = [
   'relatedTo',
 ]
 
+/** Reads from the relation's source towards its target. */
 export const RELATION_LABEL: Record<RelationType, string> = {
   serves: 'serves',
   milestoneOf: 'is a milestone of',
   breaksDownInto: 'breaks down into',
   prerequisiteFor: 'is a prerequisite for',
   supports: 'supports',
+  conflictsWith: 'conflicts with',
+  relatedTo: 'is related to',
+}
+
+/**
+ * Reads the other way, from the target back towards the source. The roadmap
+ * draws every edge downwards, so an upward relation such as `milestoneOf`
+ * needs this phrasing to stay true: "Lose weight has milestone Reach 45kg",
+ * not "Lose weight is a milestone of Reach 45kg".
+ */
+export const RELATION_REVERSE_LABEL: Record<RelationType, string> = {
+  serves: 'is served by',
+  milestoneOf: 'has milestone',
+  breaksDownInto: 'is part of',
+  prerequisiteFor: 'needs first',
+  supports: 'is supported by',
   conflictsWith: 'conflicts with',
   relatedTo: 'is related to',
 }

@@ -1,5 +1,5 @@
-import { RELATION_LABEL, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
-import { hierarchy } from '../../domain/graph'
+import { THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import { hierarchy, relationPhrase } from '../../domain/graph'
 import type { Thought, ThoughtRelation } from '../../domain/types'
 
 interface RoadmapListProps {
@@ -46,7 +46,8 @@ export function RoadmapList({
         {children.length > 0 ? (
           <ul>
             {children.map((child) =>
-              renderBranch(child.id, nextSeen, RELATION_LABEL[child.relation.type]),
+              // The branch reads downwards from `id`, so the phrase must too.
+              renderBranch(child.id, nextSeen, relationPhrase(child.relation, id)),
             )}
           </ul>
         ) : null}
@@ -81,7 +82,10 @@ export function RoadmapList({
                     className="button button--quiet button--small"
                     onClick={() => onSelectThought(entry.levels!.upper)}
                   >
-                    <span className="faint">{RELATION_LABEL[entry.relation.type]} </span>
+                    {/* Reads upwards, away from the thought in focus. */}
+                    <span className="faint">
+                      {relationPhrase(entry.relation, focusId)}{' '}
+                    </span>
                     {parent?.text ?? 'a removed thought'}
                   </button>
                 </li>
@@ -112,7 +116,7 @@ export function RoadmapList({
                     className="button button--quiet button--small"
                     onClick={() => onSelectThought(otherId)}
                   >
-                    <span className="faint">{RELATION_LABEL[relation.type]} </span>
+                    <span className="faint">{relationPhrase(relation, focusId)} </span>
                     {byId.get(otherId)?.text ?? 'a removed thought'}
                   </button>
                 </li>

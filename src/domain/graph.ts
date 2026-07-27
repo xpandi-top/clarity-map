@@ -1,5 +1,20 @@
-import { UPWARD_RELATIONS } from './defaults'
+import { RELATION_LABEL, RELATION_REVERSE_LABEL, UPWARD_RELATIONS } from './defaults'
 import type { RelationType, ThoughtRelation } from './types'
+
+/**
+ * How a relationship reads when starting from one particular end of it.
+ * Anything that renders a relationship in a fixed direction — the roadmap
+ * graph and its list view both draw top-down — must use this rather than the
+ * raw label, or the sentence comes out backwards.
+ */
+export function relationPhrase(
+  relation: Pick<ThoughtRelation, 'sourceThoughtId' | 'type'>,
+  fromThoughtId: string,
+): string {
+  return fromThoughtId === relation.sourceThoughtId
+    ? RELATION_LABEL[relation.type]
+    : RELATION_REVERSE_LABEL[relation.type]
+}
 
 /**
  * Hierarchical reading of a relation: which end sits higher in the structure.

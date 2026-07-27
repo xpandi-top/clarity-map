@@ -3,7 +3,12 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { RoadmapFlow } from '../../components/roadmap/RoadmapFlow'
 import { RoadmapList } from '../../components/roadmap/RoadmapList'
 import { RelationEditor } from '../../components/thoughts/RelationEditor'
-import { RELATION_LABEL, RELATION_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import {
+  RELATION_LABEL,
+  RELATION_REVERSE_LABEL,
+  RELATION_TYPES,
+  THOUGHT_TYPE_LABEL,
+} from '../../domain/defaults'
 import { neighbourhoodIds, relationEndpoints } from '../../domain/graph'
 import { RELATION_STYLE } from '../../domain/relationStyle'
 import type { RelationType } from '../../domain/types'
@@ -59,6 +64,7 @@ export function RoadmapScreen() {
     [visibleRelations, includedIds],
   )
 
+  const byId = useMemo(() => new Map(thoughts.map((entry) => [entry.id, entry])), [thoughts])
   const selectedEdge = subgraphRelations.find((relation) => relation.id === selectedEdgeId)
   const listMode = isNarrow || forceList
 
@@ -76,6 +82,12 @@ export function RoadmapScreen() {
 
   return (
     <div className="stack">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <Link to="/roadmap">All roadmaps</Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{focus.text}</span>
+      </nav>
+
       <div className="screen-header spread">
         <div>
           <h1>{focus.text}</h1>
@@ -85,20 +97,19 @@ export function RoadmapScreen() {
           </p>
         </div>
         <div className="row">
-          <Link className="button" to="/matrix">
-            Back to matrix
+          <Link className="button button--primary" to="/roadmap">
+            All roadmaps
           </Link>
-          <button
-            type="button"
-            className="button"
-            onClick={() => selectThought(focus.id)}
-          >
+          <button type="button" className="button" onClick={() => selectThought(focus.id)}>
             Open details
           </button>
+          <Link className="button button--quiet" to="/matrix">
+            Matrix
+          </Link>
         </div>
       </div>
 
-      <div className="filter-bar">
+      <section className="toolbar">
         <div className="field">
           <label htmlFor="roadmap-direction">Show</label>
           <select
@@ -112,48 +123,48 @@ export function RoadmapScreen() {
             <option value="down">Downstream only</option>
           </select>
         </div>
-        <button
-          type="button"
-          className="button"
-          aria-pressed={expandAll}
-          onClick={() => setExpandAll((value) => !value)}
-        >
-          {expandAll ? 'Showing all connected' : 'Showing one level'}
-        </button>
-        <button
-          type="button"
-          className="button"
-          aria-pressed={listMode}
-          disabled={isNarrow}
-          onClick={() => setForceList((value) => !value)}
-        >
-          {listMode ? 'Showing list' : 'Switch to list'}
-        </button>
-      </div>
-
-      <div className="field" style={{ maxWidth: '20rem' }}>
-        <label htmlFor="roadmap-connect-type">Dragging between two thoughts creates</label>
-        <select
-          id="roadmap-connect-type"
-          className="select"
-          value={connectType}
-          onChange={(event) => setConnectType(event.target.value as RelationType)}
-        >
-          {RELATION_TYPES.map((type) => (
-            <option key={type} value={type}>
-              lower {RELATION_LABEL[type]} upper
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {listMode ? null : (
-        <p className="faint">
-          Drag a node to move it. Drag from the dot under one node to the dot above another to
-          connect them. Select a line and press Delete to remove it. Click any node to open its
-          details.
-        </p>
-      )}
+        <div className="field">
+          <span className="label">Depth</span>
+          <button
+            type="button"
+            className="button"
+            aria-pressed={expandAll}
+            onClick={() => setExpandAll((value) => !value)}
+          >
+            {expandAll ? 'All connected' : 'One level'}
+          </button>
+        </div>
+        <div className="field">
+          <span className="label">View</span>
+          <button
+            type="button"
+            className="button"
+            aria-pressed={listMode}
+            disabled={isNarrow}
+            onClick={() => setForceList((value) => !value)}
+          >
+            {listMode ? 'List' : 'Graph'}
+          </button>
+        </div>
+        {listMode ? null : (
+          <div className="field" style={{ flex: '1 1 16rem' }}>
+            <label htmlFor="roadmap-connect-type">A new connection means</label>
+            <select
+              id="roadmap-connect-type"
+              className="select"
+              value={connectType}
+              onChange={(event) => setConnectType(event.target.value as RelationType)}
+            >
+              {/* Phrased the way the drawn arrow reads: upper, then lower. */}
+              {RELATION_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {RELATION_REVERSE_LABEL[type]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </section>
 
       <fieldset className="relation-legend" style={{ border: 'none', padding: 0, margin: 0 }}>
         <legend className="label">Relationship types — select to show or hide</legend>
@@ -217,7 +228,7 @@ export function RoadmapScreen() {
             const result = addRelation(sourceThoughtId, connectType, targetThoughtId)
             showToast(
               result.ok
-                ? (result.warning ?? `Added: ${RELATION_LABEL[connectType]}.`)
+                ? (result.warning ?? `Added: ${RELATION_REVERSE_LABEL[connectType]}.`)
                 : (result.reason ?? 'That relationship could not be added.'),
             )
           }}
@@ -233,9 +244,21 @@ export function RoadmapScreen() {
         />
       )}
 
+      {listMode ? null : (
+        <p className="faint" style={{ margin: 0 }}>
+          Drag a node to move it. Drag from the dot under one node to the dot above another to
+          connect them. Select a line and press Delete to remove it. Click any node to open its
+          details.
+        </p>
+      )}
+
       {selectedEdge ? (
         <div className="notice spread">
-          <span>Selected relationship: {RELATION_LABEL[selectedEdge.type]}</span>
+          <span>
+            {byId.get(selectedEdge.sourceThoughtId)?.text ?? 'A removed thought'}{' '}
+            <span className="faint">{RELATION_LABEL[selectedEdge.type]}</span>{' '}
+            {byId.get(selectedEdge.targetThoughtId)?.text ?? 'a removed thought'}
+          </span>
           <button
             type="button"
             className="button button--danger button--small"
