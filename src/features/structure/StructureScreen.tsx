@@ -5,7 +5,6 @@ import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
 import { TypeMapDiagram } from '../../components/structure/TypeMapDiagram'
 import { OUTCOME_HINT, looksLikeOutcome } from '../../domain/classification'
 import {
-  BREAKDOWN_TYPES,
   RELATION_LABEL,
   THOUGHT_TYPES,
   THOUGHT_TYPE_DEFINITION,
@@ -286,15 +285,13 @@ export function StructureScreen() {
                 >
                   Details and relationships
                 </button>
-                {BREAKDOWN_TYPES.includes(thought.type) ? (
-                  <button
-                    type="button"
-                    className="button button--small"
-                    onClick={() => setBreakdownId(thought.id)}
-                  >
-                    Break this down
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="button button--small"
+                  onClick={() => setBreakdownId(thought.id)}
+                >
+                  Break this down
+                </button>
               </div>
 
               <p className="faint" style={{ margin: 0 }}>

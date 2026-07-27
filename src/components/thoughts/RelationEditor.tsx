@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
-import { RELATION_LABEL, RELATION_TYPES } from '../../domain/defaults'
-import type { RelationType } from '../../domain/types'
+import { useId, useMemo, useState } from 'react'
+import {
+  RELATION_CHOICES_COMMON_FIRST,
+  choiceEndpoints,
+  findChoice,
+} from '../../domain/relationChoices'
 import { useStore, useThoughts } from '../../store'
 
 interface RelationEditorProps {
@@ -8,112 +11,114 @@ interface RelationEditorProps {
   onDone?: (message: string) => void
 }
 
-/** Source → relationship type → existing or new target → confirm. */
+/**
+ * One sentence, one field, one button: pick how this thought relates to
+ * another, then name that thought. Typing something new creates it.
+ */
 export function RelationEditor({ sourceThoughtId, onDone }: RelationEditorProps) {
   const thoughts = useThoughts()
   const addRelation = useStore((state) => state.addRelation)
   const addThought = useStore((state) => state.addThought)
 
-  const [type, setType] = useState<RelationType>('serves')
-  const [search, setSearch] = useState('')
-  const [targetId, setTargetId] = useState('')
+  const fieldId = useId()
+  const [choiceKey, setChoiceKey] = useState<string>('serves')
+  const [target, setTarget] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
-  const candidates = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    return thoughts
-      .filter((thought) => thought.id !== sourceThoughtId)
-      .filter((thought) => (term ? thought.text.toLowerCase().includes(term) : true))
-      .slice(0, 40)
-  }, [thoughts, search, sourceThoughtId])
+  const choice = findChoice(choiceKey)
 
-  const confirm = (resolvedTargetId: string) => {
-    const result = addRelation(sourceThoughtId, type, resolvedTargetId)
+  const candidates = useMemo(
+    () => thoughts.filter((thought) => thought.id !== sourceThoughtId),
+    [thoughts, sourceThoughtId],
+  )
+
+  const trimmed = target.trim()
+  const existing = useMemo(
+    () =>
+      candidates.find((thought) => thought.text.toLowerCase() === trimmed.toLowerCase()) ?? null,
+    [candidates, trimmed],
+  )
+
+  const link = () => {
+    if (!trimmed) return
+    const otherId = existing?.id ?? addThought(trimmed)
+    if (!otherId) return
+
+    // Reversed choices store the relation the other way round.
+    const { sourceThoughtId: from, targetThoughtId: to } = choiceEndpoints(
+      choice,
+      sourceThoughtId,
+      otherId,
+    )
+    const result = addRelation(from, choice.type, to)
+
     if (!result.ok) {
       setMessage(result.reason ?? 'That relationship could not be added.')
       return
     }
-    const note = result.warning ?? 'Relationship added.'
+    const note = result.warning ?? `Linked: ${choice.label} ${trimmed}.`
     setMessage(note)
-    setSearch('')
-    setTargetId('')
+    setTarget('')
     onDone?.(note)
-  }
-
-  const createAndLink = () => {
-    const text = search.trim()
-    if (!text) return
-    const newId = addThought(text)
-    if (newId) confirm(newId)
   }
 
   return (
     <div className="stack" style={{ gap: 'var(--space-3)' }}>
       <div className="field">
-        <label htmlFor="relation-type">Relationship</label>
+        <label htmlFor={`${fieldId}-type`}>This thought…</label>
         <select
-          id="relation-type"
+          id={`${fieldId}-type`}
           className="select"
-          value={type}
-          onChange={(event) => setType(event.target.value as RelationType)}
+          value={choice.key}
+          onChange={(event) => setChoiceKey(event.target.value)}
         >
-          {RELATION_TYPES.map((relationType) => (
-            <option key={relationType} value={relationType}>
-              This thought {RELATION_LABEL[relationType]}…
+          {RELATION_CHOICES_COMMON_FIRST.map((entry) => (
+            <option key={entry.key} value={entry.key}>
+              {entry.label}
             </option>
           ))}
         </select>
       </div>
 
       <div className="field">
-        <label htmlFor="relation-search">Find or create the other thought</label>
+        <label htmlFor={`${fieldId}-target`}>Which thought</label>
         <input
-          id="relation-search"
+          id={`${fieldId}-target`}
           className="input"
-          value={search}
-          placeholder="Search your thoughts"
+          list={`${fieldId}-options`}
+          value={target}
+          placeholder="Pick one, or type something new"
           onChange={(event) => {
-            setSearch(event.target.value)
-            setTargetId('')
+            setTarget(event.target.value)
+            setMessage(null)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              link()
+            }
           }}
         />
+        <datalist id={`${fieldId}-options`}>
+          {candidates.map((thought) => (
+            <option key={thought.id} value={thought.text} />
+          ))}
+        </datalist>
+        <span className="faint">
+          {trimmed && !existing
+            ? `“${trimmed}” does not exist yet and will be created.`
+            : 'Choose an existing thought, or type a new one.'}
+        </span>
       </div>
-
-      {candidates.length > 0 ? (
-        <div className="field">
-          <label htmlFor="relation-target">Existing thought</label>
-          <select
-            id="relation-target"
-            className="select"
-            value={targetId}
-            onChange={(event) => setTargetId(event.target.value)}
-          >
-            <option value="">Choose a thought</option>
-            {candidates.map((thought) => (
-              <option key={thought.id} value={thought.id}>
-                {thought.text}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
 
       <div className="row">
         <button
           type="button"
           className="button button--primary"
-          disabled={!targetId}
-          onClick={() => confirm(targetId)}
+          disabled={trimmed.length === 0}
+          onClick={link}
         >
-          Add relationship
-        </button>
-        <button
-          type="button"
-          className="button"
-          disabled={search.trim().length === 0}
-          onClick={createAndLink}
-        >
-          Create “{search.trim() || '…'}” and link
+          {existing || !trimmed ? 'Add relationship' : 'Create and link'}
         </button>
       </div>
 

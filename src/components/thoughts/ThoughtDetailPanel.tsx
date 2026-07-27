@@ -5,12 +5,8 @@ import { ConfirmButton } from '../common/ConfirmButton'
 import { DimensionInput } from '../dimensions/DimensionInput'
 import { RelationEditor } from './RelationEditor'
 import { BreakdownDialog } from './BreakdownDialog'
-import {
-  BREAKDOWN_TYPES,
-  RELATION_LABEL,
-  THOUGHT_TYPES,
-  THOUGHT_TYPE_LABEL,
-} from '../../domain/defaults'
+import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
+import { relationPhrase } from '../../domain/graph'
 import { getDimensionValue } from '../../domain/matrix'
 import type { Thought, ThoughtStatus, ThoughtType } from '../../domain/types'
 import {
@@ -67,12 +63,22 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
     [thoughts],
   )
 
-  const outgoing = useMemo(
-    () => relations.filter((relation) => relation.sourceThoughtId === selectedThoughtId),
-    [relations, selectedThoughtId],
-  )
-  const incoming = useMemo(
-    () => relations.filter((relation) => relation.targetThoughtId === selectedThoughtId),
+  /** Every relationship this thought takes part in, either way round. */
+  const related = useMemo(
+    () =>
+      relations
+        .filter(
+          (relation) =>
+            relation.sourceThoughtId === selectedThoughtId ||
+            relation.targetThoughtId === selectedThoughtId,
+        )
+        .map((relation) => ({
+          relation,
+          otherId:
+            relation.sourceThoughtId === selectedThoughtId
+              ? relation.targetThoughtId
+              : relation.sourceThoughtId,
+        })),
     [relations, selectedThoughtId],
   )
 
@@ -312,55 +318,28 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
 
           <div className="panel-section stack">
             <h3>Relationships</h3>
-            <div>
-              <p className="label">This thought points to</p>
-              {outgoing.length === 0 ? (
-                <p className="faint">Nothing yet.</p>
-              ) : (
-                <ul className="stack" style={{ gap: 'var(--space-1)' }}>
-                  {outgoing.map((relation) => (
-                    <li key={relation.id} className="spread">
-                      <span>
-                        <span className="faint">{RELATION_LABEL[relation.type]} </span>
-                        {byId.get(relation.targetThoughtId)?.text ?? 'Unknown thought'}
-                      </span>
-                      <button
-                        type="button"
-                        className="button button--quiet button--small"
-                        onClick={() => deleteRelation(relation.id)}
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div>
-              <p className="label">Pointing at this thought</p>
-              {incoming.length === 0 ? (
-                <p className="faint">Nothing yet.</p>
-              ) : (
-                <ul className="stack" style={{ gap: 'var(--space-1)' }}>
-                  {incoming.map((relation) => (
-                    <li key={relation.id} className="spread">
-                      <span>
-                        {byId.get(relation.sourceThoughtId)?.text ?? 'Unknown thought'}{' '}
-                        <span className="faint">{RELATION_LABEL[relation.type]}</span>
-                      </span>
-                      <button
-                        type="button"
-                        className="button button--quiet button--small"
-                        onClick={() => deleteRelation(relation.id)}
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {/* One list in both directions — the phrase says which way it runs. */}
+            {related.length === 0 ? (
+              <p className="faint">Nothing yet.</p>
+            ) : (
+              <ul className="stack" style={{ gap: 'var(--space-1)' }}>
+                {related.map(({ relation, otherId }) => (
+                  <li key={relation.id} className="spread">
+                    <span>
+                      <span className="faint">{relationPhrase(relation, thought.id)} </span>
+                      {byId.get(otherId)?.text ?? 'Unknown thought'}
+                    </span>
+                    <button
+                      type="button"
+                      className="button button--quiet button--small"
+                      onClick={() => deleteRelation(relation.id)}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {showRelationEditor ? (
               <RelationEditor
@@ -376,15 +355,14 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
                 >
                   Add relationship
                 </button>
-                {BREAKDOWN_TYPES.includes(thought.type) ? (
-                  <button
-                    type="button"
-                    className="button"
-                    onClick={() => setShowBreakdown(true)}
-                  >
-                    Break this down
-                  </button>
-                ) : null}
+                {/* Anything can be broken down, not only goals and projects. */}
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setShowBreakdown(true)}
+                >
+                  Break this down
+                </button>
               </div>
             )}
           </div>

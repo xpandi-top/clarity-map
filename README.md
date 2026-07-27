@@ -63,14 +63,15 @@ simply information about where the pull is coming from.
   another, in a simplified five-type view or the full thirteen, with counts,
   per-type detail, multi-select filtering of the list by type, and a
   non-blocking hint when a described result is filed as an action.
-- **Relationships** — seven relation types forming a graph, not a tree. Added
-  in one step from Structure ("this contributes to / is related to…", with the
-  target list grouped by type), from the detail panel, or by drawing on the
-  roadmap. Exact duplicates are rejected and loops are reported rather than
-  silently blocked.
-- **Manual goal breakdown** — goal, habit, and decision templates that create
-  real, connected thoughts, each step labelled with the family it belongs to
-  and how to phrase that kind of thought. No AI involved.
+- **Relationships** — seven relation types forming a graph, not a tree, each
+  offered in both readings ("serves" and "is served by"), so a link can be made
+  from whichever end you happen to be looking at. Added in one step from
+  Structure, from the detail panel, or by drawing on the roadmap. Exact
+  duplicates are rejected and loops are reported rather than silently blocked.
+- **Manual breakdown** — available on every thought, not only goals, with
+  goal, habit, and decision templates that create real, connected thoughts.
+  Each step is labelled with the family it belongs to and how to phrase that
+  kind of thought. No AI involved.
 - **Checklist export** — turn a finished roadmap into a Markdown checklist,
   nested or flattened to actions and habits only, with completed thoughts
   already ticked. Copy it, download it as `.md`, or print it.

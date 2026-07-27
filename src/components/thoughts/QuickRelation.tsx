@@ -1,39 +1,24 @@
 import { useMemo, useState } from 'react'
+import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import {
-  RELATION_LABEL,
-  RELATION_TYPES,
-  THOUGHT_TYPES,
-  THOUGHT_TYPE_LABEL,
-} from '../../domain/defaults'
-import type { RelationType } from '../../domain/types'
+  RELATION_CHOICES_COMMON_FIRST,
+  choiceEndpoints,
+  findChoice,
+} from '../../domain/relationChoices'
 import { useStore, useVisibleThoughts } from '../../store'
 
-/** Ordered so the two most common choices sit at the top. */
-const COMMON_FIRST: RelationType[] = [
-  'serves',
-  'relatedTo',
-  ...RELATION_TYPES.filter((type) => type !== 'serves' && type !== 'relatedTo'),
-]
-
-const PLAIN_LABEL: Partial<Record<RelationType, string>> = {
-  serves: 'contributes to',
-  relatedTo: 'is related to',
-}
-
-function label(type: RelationType): string {
-  return PLAIN_LABEL[type] ?? RELATION_LABEL[type]
-}
-
 /**
- * One-line "this thought contributes to / is related to that one" control.
- * The target list is grouped by thought type so the right kind of thing is
- * easy to find. Picking a target adds the relationship immediately.
+ * One-line "this thought serves / is served by that one" control. Both
+ * readings are offered, and the target list is grouped by thought type so the
+ * right kind of thing is easy to find. Picking a target links immediately.
  */
 export function QuickRelation({ sourceThoughtId }: { sourceThoughtId: string }) {
   const thoughts = useVisibleThoughts()
   const addRelation = useStore((state) => state.addRelation)
   const showToast = useStore((state) => state.showToast)
-  const [type, setType] = useState<RelationType>('serves')
+  const [choiceKey, setChoiceKey] = useState<string>('serves')
+
+  const choice = findChoice(choiceKey)
 
   const grouped = useMemo(() => {
     const others = thoughts.filter((thought) => thought.id !== sourceThoughtId)
@@ -45,10 +30,15 @@ export function QuickRelation({ sourceThoughtId }: { sourceThoughtId: string }) 
 
   const link = (targetThoughtId: string) => {
     if (!targetThoughtId) return
-    const result = addRelation(sourceThoughtId, type, targetThoughtId)
+    const { sourceThoughtId: from, targetThoughtId: to } = choiceEndpoints(
+      choice,
+      sourceThoughtId,
+      targetThoughtId,
+    )
+    const result = addRelation(from, choice.type, to)
     showToast(
       result.ok
-        ? (result.warning ?? `Linked: ${label(type)}.`)
+        ? (result.warning ?? `Linked: ${choice.label}.`)
         : (result.reason ?? 'That relationship could not be added.'),
     )
   }
@@ -64,12 +54,12 @@ export function QuickRelation({ sourceThoughtId }: { sourceThoughtId: string }) 
       <select
         id={`quick-type-${sourceThoughtId}`}
         className="select quick-relation__type"
-        value={type}
-        onChange={(event) => setType(event.target.value as RelationType)}
+        value={choice.key}
+        onChange={(event) => setChoiceKey(event.target.value)}
       >
-        {COMMON_FIRST.map((entry) => (
-          <option key={entry} value={entry}>
-            {label(entry)}
+        {RELATION_CHOICES_COMMON_FIRST.map((entry) => (
+          <option key={entry.key} value={entry.key}>
+            {entry.label}
           </option>
         ))}
       </select>

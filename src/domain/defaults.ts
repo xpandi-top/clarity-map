@@ -77,9 +77,6 @@ export const THOUGHT_TYPE_DEFINITION: Record<ThoughtType, string> = {
   note: 'Information stored for reference.',
 }
 
-/** Types that can be broken down into smaller structure. */
-export const BREAKDOWN_TYPES: ThoughtType[] = ['vision', 'goal', 'outcome', 'project']
-
 export const RELATION_TYPES: RelationType[] = [
   'serves',
   'milestoneOf',
