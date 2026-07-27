@@ -62,6 +62,13 @@ export function axisPosition(dimension: Dimension, value: DimensionValue): numbe
   }
 }
 
+/**
+ * How a thought's value on a dimension is obtained. Defaults to the answer
+ * stored on the thought; the matrix swaps in a resolver that also understands
+ * synthetic ranking axes.
+ */
+export type ValueResolver = (thought: Thought, dimension: Dimension) => DimensionValue
+
 export type MatrixLayout = 'quadrant' | 'scatter' | 'mixed'
 
 /** Dimensions with exactly two option-like states render as quadrants. */
@@ -104,9 +111,10 @@ export function quadrantOf(
   thought: Thought,
   xDimension: Dimension,
   yDimension: Dimension,
+  resolve: ValueResolver = getDimensionValue,
 ): QuadrantId | null {
-  const x = axisPosition(xDimension, getDimensionValue(thought, xDimension))
-  const y = axisPosition(yDimension, getDimensionValue(thought, yDimension))
+  const x = axisPosition(xDimension, resolve(thought, xDimension))
+  const y = axisPosition(yDimension, resolve(thought, yDimension))
   if (x === null || y === null) return null
   const xHigh = x >= 0.5
   const yHigh = y >= 0.5
@@ -184,14 +192,15 @@ export function computeMatrixPoints(
   thoughts: Thought[],
   xDimension: Dimension,
   yDimension: Dimension,
+  resolve: ValueResolver = getDimensionValue,
 ): { points: MatrixPoint[]; unresolved: Thought[] } {
   const points: MatrixPoint[] = []
   const unresolved: Thought[] = []
   const occupied = new Map<string, number>()
 
   for (const thought of thoughts) {
-    const rawX = axisPosition(xDimension, getDimensionValue(thought, xDimension))
-    const rawY = axisPosition(yDimension, getDimensionValue(thought, yDimension))
+    const rawX = axisPosition(xDimension, resolve(thought, xDimension))
+    const rawY = axisPosition(yDimension, resolve(thought, yDimension))
     if (rawX === null || rawY === null) {
       unresolved.push(thought)
       continue
@@ -214,7 +223,7 @@ export function computeMatrixPoints(
       thought,
       x: clampToPlot(rawX + inward(rawX) * (column * CLUSTER_STEP + wobble(7))),
       y: clampToPlot(rawY + inward(rawY) * (row * CLUSTER_STEP + wobble(13))),
-      quadrant: quadrantOf(thought, xDimension, yDimension),
+      quadrant: quadrantOf(thought, xDimension, yDimension, resolve),
     })
   }
 

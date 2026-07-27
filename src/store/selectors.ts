@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { BUILTIN_DIMENSION, createDefaultDimensions } from '../domain/defaults'
+import { createRankAxis, isRankAxis, rankedDimensionId } from '../domain/rankingAxis'
 import { evaluateRules } from '../domain/rules'
 import type { Dimension, RuleSuggestion, Thought } from '../domain/types'
 import { useStore } from './store'
@@ -133,10 +134,19 @@ export function useMatrixAxes(): { xDimension: Dimension; yDimension: Dimension 
 
   return useMemo(() => {
     const stored = currentId ? axes[currentId] : undefined
-    const find = (id: string | undefined, fallbackId: string) =>
-      dimensions.find((dimension) => dimension.id === id) ??
-      dimensions.find((dimension) => dimension.id === fallbackId) ??
-      dimensions[0]
+    const find = (id: string | undefined, fallbackId: string) => {
+      // Ranking axes are synthetic, so they are rebuilt from the dimension
+      // they rank rather than looked up in the stored list.
+      if (id && isRankAxis(id)) {
+        const source = dimensions.find((dimension) => dimension.id === rankedDimensionId(id))
+        if (source) return createRankAxis(source)
+      }
+      return (
+        dimensions.find((dimension) => dimension.id === id) ??
+        dimensions.find((dimension) => dimension.id === fallbackId) ??
+        dimensions[0]
+      )
+    }
 
     return {
       xDimension: find(stored?.x, BUILTIN_DIMENSION.motivation),

@@ -112,8 +112,8 @@ export function CaptureScreen() {
                 Undo last deletion
               </button>
             ) : null}
-            <Link className="button button--primary" to="/review/importance">
-              Next: Review importance
+            <Link className="button button--primary" to="/structure">
+              Next: Structure
             </Link>
           </div>
         </div>

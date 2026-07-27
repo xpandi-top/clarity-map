@@ -3,19 +3,26 @@ import { ThoughtDetailPanel } from '../thoughts/ThoughtDetailPanel'
 import { Toast } from './Toast'
 import { useCurrentWorkspace } from '../../store'
 
-/** The six stages of the workflow, in order. */
+/**
+ * The workflow in order: write it down, work out what each thought is and how
+ * it connects, decide what is doable, rank by comparison, and only then read
+ * the matrix — which is built from those rankings.
+ */
 const STAGES = [
   { to: '/capture', label: 'Capture' },
-  { to: '/review/importance', label: 'Importance' },
-  { to: '/matrix', label: 'Matrix' },
   { to: '/structure', label: 'Structure' },
-  { to: '/actions', label: 'Actions' },
   { to: '/roadmap', label: 'Roadmap' },
+  { to: '/actions', label: 'Actions' },
+  { to: '/compare', label: 'Compare' },
+  { to: '/matrix', label: 'Matrix' },
 ]
 
-/** Available at any point, so they sit outside the numbered sequence. */
+/**
+ * Optional at any point. Importance is one way to answer a dimension directly,
+ * but comparing on the Compare screen does the same job without it.
+ */
 const TOOLS = [
-  { to: '/compare', label: 'Compare' },
+  { to: '/review/importance', label: 'Importance' },
   { to: '/settings/data', label: 'Settings' },
 ]
 

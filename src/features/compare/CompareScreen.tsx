@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ConfirmButton } from '../../components/common/ConfirmButton'
 import { BUILTIN_DIMENSION, THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import {
@@ -86,9 +87,17 @@ export function CompareScreen() {
 
   return (
     <div className="stack">
-      <div className="screen-header">
-        <h1>Compare</h1>
-        <p>Two at a time is easier than ranking everything at once. There is no correct answer here.</p>
+      <div className="screen-header spread">
+        <div>
+          <h1>Compare</h1>
+          <p>
+            Two at a time is easier than ranking everything at once, and it needs no
+            classification first. There is no correct answer here.
+          </p>
+        </div>
+        <Link className="button button--primary" to="/matrix">
+          Next: Matrix
+        </Link>
       </div>
 
       <div className="filter-bar">

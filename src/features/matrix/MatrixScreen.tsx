@@ -8,6 +8,7 @@ import { ThoughtButton } from '../../components/thoughts/ThoughtButton'
 import { BUILTIN_DIMENSION, THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import {
   computeMatrixPoints,
+  getDimensionValue,
   matrixLayout,
   quadrantOf,
   quadrantTitle,
@@ -15,6 +16,14 @@ import {
   valueForPosition,
   type QuadrantId,
 } from '../../domain/matrix'
+import {
+  RANK_AXIS_PREFIX,
+  createRankAwareResolver,
+  createRankAxes,
+  isRankAxis,
+  rankScores,
+  rankedDimensionId,
+} from '../../domain/rankingAxis'
 import { ORDER_LABEL, hasComparisonData, orderThoughts, type ThoughtOrder } from '../../domain/ordering'
 import { allTags, filterThoughts } from '../../domain/selectors'
 import type { Thought, ThoughtStatus, ThoughtType } from '../../domain/types'
@@ -62,6 +71,12 @@ export function MatrixScreen() {
     [dimensions],
   )
 
+  /** Synthetic axes fed by the pairwise ranking rather than stored answers. */
+  const rankAxes = useMemo(
+    () => createRankAxes(dimensions, [BUILTIN_DIMENSION.thoughtType]),
+    [dimensions],
+  )
+
   const filtered = useMemo(
     () =>
       filterThoughts(thoughts, {
@@ -83,9 +98,20 @@ export function MatrixScreen() {
     [filtered, order, comparisons, rankDimensionId],
   )
 
+  /** Ranking tables for whichever ranking axes are currently plotted. */
+  const resolveValue = useMemo(() => {
+    const tables = new Map<string, Map<string, number | null>>()
+    for (const axis of [xDimension, yDimension]) {
+      if (axis && isRankAxis(axis.id) && !tables.has(axis.id)) {
+        tables.set(axis.id, rankScores(thoughts, comparisons, rankedDimensionId(axis.id)))
+      }
+    }
+    return createRankAwareResolver(getDimensionValue, tables)
+  }, [xDimension, yDimension, thoughts, comparisons])
+
   const { points, unresolved } = useMemo(
-    () => computeMatrixPoints(sorted, xDimension, yDimension),
-    [sorted, xDimension, yDimension],
+    () => computeMatrixPoints(sorted, xDimension, yDimension, resolveValue),
+    [sorted, xDimension, yDimension, resolveValue],
   )
 
   /** Ordered thoughts bucketed by quadrant, for the board view. */
@@ -97,11 +123,11 @@ export function MatrixScreen() {
       highLow: [],
     }
     for (const thought of sorted) {
-      const quadrant = quadrantOf(thought, xDimension, yDimension)
+      const quadrant = quadrantOf(thought, xDimension, yDimension, resolveValue)
       if (quadrant) buckets[quadrant].push(thought)
     }
     return buckets
-  }, [sorted, xDimension, yDimension])
+  }, [sorted, xDimension, yDimension, resolveValue])
 
   const rankingAvailable = useMemo(
     () => hasComparisonData(filtered, comparisons, rankDimensionId),
@@ -110,18 +136,41 @@ export function MatrixScreen() {
 
   const layout = matrixLayout(xDimension, yDimension)
 
+  // A ranking axis is derived from comparisons, so there is nothing to write
+  // to. Say so rather than silently ignoring half of a drag.
+  const lockedAxes = [xDimension, yDimension].filter((axis) => axis && isRankAxis(axis.id))
+  const bothAxesLocked = lockedAxes.length === 2
+
+  const reportLocked = () => {
+    showToast(
+      bothAxesLocked
+        ? 'Both axes come from your comparisons. Change a position in Compare.'
+        : `${lockedAxes[0].name} comes from your comparisons and cannot be dragged. The other axis was updated.`,
+    )
+  }
+
   const move = (thoughtId: string, x: number, y: number) => {
-    setDimensionValue(thoughtId, xDimension.id, valueForPosition(xDimension, x))
-    setDimensionValue(thoughtId, yDimension.id, valueForPosition(yDimension, y))
-    showToast('Position updated.')
+    if (!isRankAxis(xDimension.id)) {
+      setDimensionValue(thoughtId, xDimension.id, valueForPosition(xDimension, x))
+    }
+    if (!isRankAxis(yDimension.id)) {
+      setDimensionValue(thoughtId, yDimension.id, valueForPosition(yDimension, y))
+    }
+    if (lockedAxes.length > 0) reportLocked()
+    else showToast('Position updated.')
   }
 
   const moveToQuadrant = (thoughtId: string, quadrant: QuadrantId) => {
     const xHigh = quadrant === 'highHigh' || quadrant === 'highLow'
     const yHigh = quadrant === 'highHigh' || quadrant === 'lowHigh'
-    setDimensionValue(thoughtId, xDimension.id, valueForHalf(xDimension, xHigh))
-    setDimensionValue(thoughtId, yDimension.id, valueForHalf(yDimension, yHigh))
-    showToast(`Moved to ${quadrantTitle(quadrant, xDimension, yDimension)}.`)
+    if (!isRankAxis(xDimension.id)) {
+      setDimensionValue(thoughtId, xDimension.id, valueForHalf(xDimension, xHigh))
+    }
+    if (!isRankAxis(yDimension.id)) {
+      setDimensionValue(thoughtId, yDimension.id, valueForHalf(yDimension, yHigh))
+    }
+    if (lockedAxes.length > 0) reportLocked()
+    else showToast(`Moved to ${quadrantTitle(quadrant, xDimension, yDimension)}.`)
   }
 
   if (!xDimension || !yDimension) {
@@ -136,7 +185,10 @@ export function MatrixScreen() {
       <div className="screen-header spread">
         <div>
           <h1>Matrix</h1>
-          <p>This is one way to view your thoughts. Nothing here is a verdict.</p>
+          <p>
+            This is one way to view your thoughts. Nothing here is a verdict. Axes can be an
+            answer you gave, or a ranking built from your comparisons.
+          </p>
         </div>
         {layout === 'quadrant' ? null : (
           <button
@@ -166,11 +218,20 @@ export function MatrixScreen() {
               setMatrixAxes({ x: event.target.value, y: yDimension.id })
             }}
           >
-            {dimensions.map((dimension) => (
-              <option key={dimension.id} value={dimension.id}>
-                {dimension.name}
-              </option>
-            ))}
+            <optgroup label="Answers stored on each thought">
+              {dimensions.map((dimension) => (
+                <option key={dimension.id} value={dimension.id}>
+                  {dimension.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="From your comparisons">
+              {rankAxes.map((axis) => (
+                <option key={axis.id} value={axis.id}>
+                  {axis.name}
+                </option>
+              ))}
+            </optgroup>
             <option value={CREATE_DIMENSION}>+ Create a dimension…</option>
           </select>
         </div>
@@ -188,11 +249,20 @@ export function MatrixScreen() {
               setMatrixAxes({ x: xDimension.id, y: event.target.value })
             }}
           >
-            {dimensions.map((dimension) => (
-              <option key={dimension.id} value={dimension.id}>
-                {dimension.name}
-              </option>
-            ))}
+            <optgroup label="Answers stored on each thought">
+              {dimensions.map((dimension) => (
+                <option key={dimension.id} value={dimension.id}>
+                  {dimension.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="From your comparisons">
+              {rankAxes.map((axis) => (
+                <option key={axis.id} value={axis.id}>
+                  {axis.name}
+                </option>
+              ))}
+            </optgroup>
             <option value={CREATE_DIMENSION}>+ Create a dimension…</option>
           </select>
         </div>
@@ -285,6 +355,34 @@ export function MatrixScreen() {
           </div>
         ) : null}
       </div>
+
+      {rankAxes.length >= 2 ? (
+        <div className="row">
+          <button
+            type="button"
+            className="button button--small"
+            aria-pressed={bothAxesLocked}
+            onClick={() =>
+              setMatrixAxes(
+                bothAxesLocked
+                  ? { x: BUILTIN_DIMENSION.motivation, y: BUILTIN_DIMENSION.importance }
+                  : {
+                      x: `${RANK_AXIS_PREFIX}${BUILTIN_DIMENSION.priority}`,
+                      y: `${RANK_AXIS_PREFIX}${BUILTIN_DIMENSION.importance}`,
+                    },
+              )
+            }
+          >
+            {bothAxesLocked ? 'Back to answered axes' : 'Plot by ranking instead'}
+          </button>
+          {bothAxesLocked ? (
+            <span className="faint">
+              Both axes come from Compare, so nothing had to be classified as Want, Should, or
+              important first.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       {order === 'comparison' ? (
         <p className="faint" style={{ margin: 0 }}>

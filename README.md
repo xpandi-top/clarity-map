@@ -45,11 +45,14 @@ simply information about where the pull is coming from.
 - **Importance review** — one thought at a time, filtered by whether a thought
   is still unanswered or already marked important or not important, with
   keyboard navigation and the freedom to change earlier answers.
-- **Two-dimensional matrix** — any two dimensions on the axes. Two binary
-  dimensions give a four-panel board whose cards are dragged between quadrants
-  and ordered by your pairwise ranking; scale dimensions give a scatter plot
-  where position carries meaning. Search and filter by type, status, and tag.
-  Unplaced thoughts are listed separately.
+- **Two-dimensional matrix** — either axis can be a dimension you answered or
+  a **ranking built from your comparisons**, so the matrix works without
+  classifying anything first. Two binary dimensions give a four-panel board
+  whose cards are dragged between quadrants and ordered by your pairwise
+  ranking; scales and rankings give a scatter plot where position carries
+  meaning. Thoughts you have not compared stay in the unplaced list rather
+  than piling up at zero as if they had lost. Search and filter by type,
+  status, and tag.
 - **Thought detail panel** — text, description, type, dimensions, tags, status,
   timestamps, relationships, duplicate, archive, delete, and roadmap access.
 - **Custom dimensions** — binary, scale, single-select, multi-select, and
@@ -97,13 +100,13 @@ simply information about where the pull is coming from.
 | Route | Purpose |
 | --- | --- |
 | `#/welcome` | Start, continue, load the example, or import |
-| `#/capture` | Write thoughts down; answer Want or Should |
-| `#/review/importance` | One question, one thought at a time |
-| `#/matrix` | Two-dimensional view with quadrants and filters |
-| `#/compare` | Pairwise comparison and ranking |
+| `#/capture` | Write thoughts down; answer Want or Should if you want to |
 | `#/structure` | Classify thoughts and see relationships |
-| `#/actions` | Assess actions and habits |
 | `#/roadmap` · `#/roadmap/:thoughtId` | Graph of what sits above and below |
+| `#/actions` | Assess actions and habits |
+| `#/compare` | Pairwise comparison and ranking |
+| `#/matrix` | Two-dimensional view, from answers or from rankings |
+| `#/review/importance` | Optional: one question, one thought at a time |
 | `#/settings/dimensions` | Create and configure dimensions |
 | `#/settings/rules` | Rules and their suggestions |
 | `#/settings/data` | Workspaces, export, import, and deletion |
@@ -111,18 +114,20 @@ simply information about where the pull is coming from.
 The intended workflow:
 
 ```text
-Brain dump
-→ Want versus Should
-→ Important versus Not Important
-→ Two-dimensional matrix
-→ Thought classification
-→ Thought relationships
-→ Goal breakdown
-→ Action assessment
-→ Roadmap
+Capture      write it down
+→ Structure  what kind of thought is this, and what does it connect to
+→ Roadmap    what sits above and below it
+→ Actions    what could actually be done
+→ Compare    which of these two matters more
+→ Matrix     read the result, plotted from those comparisons
 ```
 
 You can move between stages in any order without losing work.
+
+Nothing has to be classified as Want, Should, or important for the matrix to
+be useful: comparing pairs produces a ranking, and either axis can be that
+ranking. Answering a dimension directly is still available — the Importance
+review sits alongside Settings — it is just no longer the only route.
 
 ---
 
