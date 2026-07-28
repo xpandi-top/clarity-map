@@ -61,6 +61,9 @@ describe('reflection assistant', () => {
     expect(normalizeGeneratedAction('打开文件夹，开始整理清单。', 'zh-CN')).toBe(
       '打开文件夹。',
     )
+    expect(normalizeGeneratedAction('列出明天要准备的物品，', 'zh-CN')).toBe(
+      '列出明天要准备的物品。',
+    )
   })
 
   it('keeps usable model fields and fills incomplete Chinese output', () => {

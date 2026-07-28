@@ -355,6 +355,7 @@ export function normalizeGeneratedAction(action: string, locale: Locale): string
     normalized = normalized
       .replace(/^(?:请|建议|可以|尝试|考虑|先)\s*/u, '')
       .split(/并(?:且)?|然后|再|或|(?:和|[，,])(?=(?:列出|列|写下|写|整理|创建|检查|打开|拍摄|准备|收集|打包|保存|发送|完成|开始))/u)[0]
+      .replace(/[，,；;：:]+$/u, '')
       .trim()
     return /[。！？]$/u.test(normalized) ? normalized : `${normalized}。`
   }
@@ -365,6 +366,7 @@ export function normalizeGeneratedAction(action: string, locale: Locale): string
   normalized = normalized
     .replace(/^(?:please|try to|consider|you can|first)\s+/iu, '')
     .split(/\s+(?:and|then|or)\s+|,\s*(?=(?:open|write|create|list|check|put|take|organize|close|start|choose|gather|record)\b)/iu)[0]
+    .replace(/[,;:]+$/u, '')
     .trim()
   return /[.!?]$/u.test(normalized) ? normalized : `${normalized}.`
 }
