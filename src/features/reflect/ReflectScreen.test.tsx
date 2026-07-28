@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ReflectScreen } from './ReflectScreen'
@@ -13,6 +13,17 @@ function renderScreen() {
   )
 }
 
+async function reachActions(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(
+    screen.getByLabelText('What is happening right now?'),
+    'I feel sleepy. I opened the computer but have not started.',
+  )
+  await user.click(screen.getByRole('button', { name: 'Help me find the next step' }))
+  await screen.findByRole('heading', { name: 'Is this understanding close?' })
+  await user.click(screen.getByRole('button', { name: 'Yes, that is right' }))
+  await user.click(screen.getByRole('button', { name: 'Show small actions' }))
+}
+
 beforeEach(() => {
   window.localStorage.clear()
   resetStore()
@@ -20,77 +31,89 @@ beforeEach(() => {
 })
 
 describe('ReflectScreen', () => {
-  it('saves a one-sentence observation without an interpretation', async () => {
+  it('reaches concrete actions without requiring observation or interpretation typing', async () => {
     const user = userEvent.setup()
     renderScreen()
 
-    await user.type(
-      screen.getByLabelText('In your own words'),
-      'After leaving the house, I became more willing to move.',
-    )
-    await user.click(screen.getByRole('button', { name: 'Save this reflection' }))
+    await reachActions(user)
 
-    const state = useStore.getState()
-    expect(state.observations).toHaveLength(1)
-    expect(state.observations[0].description).toBe(
-      'After leaving the house, I became more willing to move.',
-    )
-    // Interpretation is optional, so nothing was concluded on the user's behalf.
-    expect(state.evidence).toHaveLength(0)
+    expect(screen.getAllByRole('button', { name: /Choose this/ })).toHaveLength(3)
+    expect(screen.queryByText('Beliefs and model building')).not.toBeInTheDocument()
   })
 
-  it('keeps the observation and the interpretation as separate records', async () => {
+  it('visibly distinguishes observations from possible interpretations and allows edits', async () => {
     const user = userEvent.setup()
     renderScreen()
 
-    await user.type(screen.getByLabelText('In your own words'), 'I left the house.')
-    await user.type(
-      screen.getByLabelText('What do you think this may indicate?'),
-      'Changing environments may help me move.',
-    )
-    await user.click(screen.getByRole('button', { name: 'Save this reflection' }))
+    await user.type(screen.getByLabelText('What is happening right now?'), 'The document is open.')
+    await user.click(screen.getByRole('button', { name: 'Help me find the next step' }))
 
-    const state = useStore.getState()
-    expect(state.observations[0].description).toBe('I left the house.')
-    expect(state.evidence[0].statement).toBe('Changing environments may help me move.')
-    expect(state.evidence[0].observationIds).toEqual([state.observations[0].id])
+    expect(screen.getByText('Directly observed')).toBeInTheDocument()
+    expect(screen.getByText('Possible interpretations')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.clear(screen.getByLabelText('Situation'))
+    await user.type(screen.getByLabelText('Situation'), 'A document is open')
+    expect(screen.getByDisplayValue('A document is open')).toBeInTheDocument()
   })
 
-  it('opens the belief update form when the experience contradicts a belief', async () => {
+  it('makes a selected action smaller and enters focus mode', async () => {
     const user = userEvent.setup()
-    useStore.getState().addBelief({ statement: 'One indulgence means failure.' })
     renderScreen()
+    await reachActions(user)
 
-    await user.type(screen.getByLabelText('In your own words'), 'Dinner still got cooked.')
-    await user.type(
-      screen.getByLabelText('What do you think this may indicate?'),
-      'One indulgence does not decide the rest of the day.',
+    const actionButtons = screen.getAllByRole('button', { name: /Choose this/ })
+    await user.click(actionButtons[2])
+    expect(screen.getByText('Only do this now:')).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Still too difficult — make it smaller' }),
     )
-    await user.click(screen.getByLabelText('It contradicts an existing belief.'))
-    await user.click(screen.getByRole('button', { name: 'Save this reflection' }))
-
-    expect(screen.getByRole('dialog', { name: 'Update a belief' })).toBeInTheDocument()
-    // Recorded against the reading, not silently dropped.
-    expect(useStore.getState().evidence[0].contradictingObservationIds).toHaveLength(1)
+    expect(screen.getByText('Open the place where this action would begin.')).toBeInTheDocument()
   })
 
-  it('only shows defaults the user has written that match the situation', async () => {
+  it('offers optional knowledge capture only after outcome feedback', async () => {
     const user = userEvent.setup()
-    useStore.getState().addPersonalRule({
-      name: 'Ten-minute limit',
-      triggerDescription: 'I have been deliberating for a long time',
-      defaultResponse: 'Choose a good-enough option, then reassess.',
-    })
     renderScreen()
+    await reachActions(user)
+    await user.click(screen.getAllByRole('button', { name: /Choose this/ })[0])
+    await user.click(screen.getByRole('button', { name: 'Done' }))
 
-    expect(screen.getByText('Nothing you have recorded matches yet.')).toBeInTheDocument()
+    expect(screen.queryByText('Supporting evidence')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'It became easier to continue' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
 
-    await user.type(
-      screen.getByLabelText('Where are you right now?'),
-      'deliberating about dinner',
+    expect(screen.getByText('Supporting evidence')).toBeInTheDocument()
+    expect(screen.getByText('Reusable strategy')).toBeInTheDocument()
+    expect(screen.getByText('Reminder to review later')).toBeInTheDocument()
+  })
+
+  it('saves the untouched original entry as an observation', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await reachActions(user)
+    await user.click(screen.getAllByRole('button', { name: /Choose this/ })[0])
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('button', { name: 'No noticeable change' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Save selected items' }))
+
+    expect(useStore.getState().observations[0].description).toBe(
+      'I feel sleepy. I opened the computer but have not started.',
     )
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Find one next step' })).toBeInTheDocument(),
+    )
+  })
 
-    expect(screen.getByText('Ten-minute limit')).toBeInTheDocument()
-    expect(screen.getByText('Choose a good-enough option, then reassess.')).toBeInTheDocument()
+  it('restores a safe in-progress draft after remounting', async () => {
+    const user = userEvent.setup()
+    const view = renderScreen()
+    await user.type(screen.getByLabelText('What is happening right now?'), 'Packing is unfinished.')
+    await user.click(screen.getByRole('button', { name: 'Help me find the next step' }))
+    await screen.findByRole('heading', { name: 'Is this understanding close?' })
+    view.unmount()
+
+    renderScreen()
+    expect(screen.getByRole('heading', { name: 'Is this understanding close?' })).toBeInTheDocument()
+    expect(screen.getAllByText('Packing is unfinished.').length).toBeGreaterThan(0)
   })
 })

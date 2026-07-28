@@ -1,544 +1,730 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BeliefUpdateDialog } from '../../components/learning/BeliefUpdateDialog'
-import { PersonalRuleDialog } from '../../components/learning/PersonalRuleDialog'
-import { RecordPicker } from '../../components/learning/RecordPicker'
-import { RelevantLearning } from '../../components/learning/RelevantLearning'
-import { ThoughtLinkPicker } from '../../components/learning/ThoughtLinkPicker'
-import { rulesMatchingSituation } from '../../domain/relevance'
-import type { ObservationContext } from '../../domain/types'
+import { getActiveLocale, tx } from '../../i18n/core'
 import {
-  useBeliefs,
-  useHypotheses,
-  usePersonalRules,
-  useStore,
-} from '../../store'
-import { tx } from '../../i18n/core'
+  analyzeReflection,
+  createFallbackAnalysis,
+  fallbackActions,
+  makeActionSmallerWithModel,
+  reduceAction,
+  type ReflectionAction,
+  type ReflectionAnalysis,
+  type ReflectionHelpMode,
+} from '../../domain/reflectionAssistant'
+import { useCurrentWorkspaceId, useStore } from '../../store'
 
-type ModelChange =
-  | 'none'
-  | 'supports'
-  | 'weakens'
-  | 'contradicts'
-  | 'newBelief'
-  | 'unsure'
+type ReflectionStep =
+  | 'capture'
+  | 'reviewing_understanding'
+  | 'choosing_help_mode'
+  | 'choosing_action'
+  | 'focusing'
+  | 'recording_outcome'
+  | 'optional_reflection'
 
-const MODEL_CHANGES: Array<{ value: ModelChange; label: string }> = [
-  { value: 'none', label: 'No, this is only an observation.' },
-  { value: 'supports', label: 'It supports an existing belief.' },
-  { value: 'weakens', label: 'It weakens an existing belief.' },
-  { value: 'contradicts', label: 'It contradicts an existing belief.' },
-  { value: 'newBelief', label: 'It suggests a new belief.' },
-  { value: 'unsure', label: 'I am not sure yet.' },
+type ModelState = 'idle' | 'loading' | 'ready' | 'fallback'
+type Outcome = 'easier' | 'no_change' | 'more_tired' | 'different_blocker'
+
+interface ReflectionDraft {
+  step: ReflectionStep
+  originalEntry: string
+  analysis: ReflectionAnalysis | null
+  helpMode: ReflectionHelpMode
+  actions: ReflectionAction[]
+  selectedAction: ReflectionAction | null
+  outcome: Outcome | null
+  modelState: ModelState
+}
+
+const EMPTY_DRAFT: ReflectionDraft = {
+  step: 'capture',
+  originalEntry: '',
+  analysis: null,
+  helpMode: 'recommend',
+  actions: [],
+  selectedAction: null,
+  outcome: null,
+  modelState: 'idle',
+}
+
+const HELP_MODES: Array<{ value: ReflectionHelpMode; label: string }> = [
+  { value: 'find_first_step', label: 'Find the first step' },
+  { value: 'clarify', label: 'Make the situation clearer' },
+  { value: 'recover_energy', label: 'Recover some energy' },
+  { value: 'recommend', label: 'I am not sure — recommend one' },
 ]
 
-type Keep = 'rule' | 'evidence' | 'later' | 'no'
-
-const KEEP_OPTIONS: Array<{ value: Keep; label: string }> = [
-  { value: 'rule', label: 'Create a default rule.' },
-  { value: 'evidence', label: 'Add it as evidence only.' },
-  { value: 'later', label: 'Review it later.' },
-  { value: 'no', label: 'No.' },
+const OUTCOMES: Array<{ value: Outcome; label: string }> = [
+  { value: 'easier', label: 'It became easier to continue' },
+  { value: 'no_change', label: 'No noticeable change' },
+  { value: 'more_tired', label: 'I feel more tired' },
+  { value: 'different_blocker', label: 'I discovered a different blocker' },
 ]
 
-const REVIEW_LATER_TAG = 'review later'
+const ENERGY_COPY: Record<ReflectionAction['energy_level'], { name: string; detail: string }> = {
+  very_low: { name: 'Very low energy', detail: 'About two minutes' },
+  low: { name: 'Low energy', detail: 'Three to five minutes' },
+  medium: { name: 'Medium energy', detail: 'No more than ten minutes' },
+}
 
-/**
- * The bottom-up half of the app: something happened, and it might mean
- * something. Deliberately lightweight — one sentence is a complete entry, and
- * every question after the first can be skipped.
- */
+function storageKey(workspaceId: string | null) {
+  return `clarity-map-reflection-draft:${workspaceId ?? 'none'}`
+}
+
+function restoreDraft(workspaceId: string | null): ReflectionDraft {
+  try {
+    const saved = window.localStorage.getItem(storageKey(workspaceId))
+    if (!saved) return EMPTY_DRAFT
+    const value = JSON.parse(saved) as Partial<ReflectionDraft>
+    if (
+      typeof value.originalEntry !== 'string' ||
+      ![
+        'capture',
+        'reviewing_understanding',
+        'choosing_help_mode',
+        'choosing_action',
+        'focusing',
+        'recording_outcome',
+        'optional_reflection',
+      ].includes(value.step ?? '')
+    ) {
+      return EMPTY_DRAFT
+    }
+    return {
+      ...EMPTY_DRAFT,
+      ...value,
+      modelState: value.modelState === 'loading' ? 'fallback' : (value.modelState ?? 'idle'),
+    }
+  } catch {
+    return EMPTY_DRAFT
+  }
+}
+
 export function ReflectScreen() {
-  const beliefs = useBeliefs()
-  const hypotheses = useHypotheses()
-  const personalRules = usePersonalRules()
+  const workspaceId = useCurrentWorkspaceId()
+  const [draft, setDraft] = useState<ReflectionDraft>(() => restoreDraft(workspaceId))
+  const [editing, setEditing] = useState(false)
+  const [modelNote, setModelNote] = useState(() =>
+    draft.modelState === 'fallback'
+      ? 'On-device suggestions are unavailable. The simple version is ready to use.'
+      : '',
+  )
+  const [started, setStarted] = useState(false)
+  const [saveObservation, setSaveObservation] = useState(true)
+  const [saveEvidence, setSaveEvidence] = useState(false)
+  const [saveStrategy, setSaveStrategy] = useState(false)
+  const [reviewLater, setReviewLater] = useState(false)
+  const [evidenceStatement, setEvidenceStatement] = useState('')
+  const [strategy, setStrategy] = useState('')
+  const requestId = useRef(0)
+
   const addObservation = useStore((state) => state.addObservation)
   const addEvidence = useStore((state) => state.addEvidence)
-  const updateBelief = useStore((state) => state.updateBelief)
-  const updateHypothesis = useStore((state) => state.updateHypothesis)
+  const addPersonalRule = useStore((state) => state.addPersonalRule)
   const showToast = useStore((state) => state.showToast)
 
-  const [description, setDescription] = useState('')
-  const [interpretation, setInterpretation] = useState('')
-  const [occurredAt, setOccurredAt] = useState('')
-  const [context, setContext] = useState<ObservationContext>({ tags: [] })
-  const [tagDraft, setTagDraft] = useState('')
-  const [energyBefore, setEnergyBefore] = useState('')
-  const [energyAfter, setEnergyAfter] = useState('')
-  const [moodBefore, setMoodBefore] = useState('')
-  const [moodAfter, setMoodAfter] = useState('')
-  const [attempt, setAttempt] = useState('')
-  const [thoughtIds, setThoughtIds] = useState<string[]>([])
-  const [beliefIds, setBeliefIds] = useState<string[]>([])
-  const [hypothesisIds, setHypothesisIds] = useState<string[]>([])
-  const [modelChange, setModelChange] = useState<ModelChange>('none')
-  const [keep, setKeep] = useState<Keep>('evidence')
-  const [situation, setSituation] = useState('')
+  useEffect(() => {
+    window.localStorage.setItem(storageKey(workspaceId), JSON.stringify(draft))
+  }, [draft, workspaceId])
 
-  const [beliefDialog, setBeliefDialog] = useState<{
-    evidenceIds: string[]
-    thenRule: boolean
-  } | null>(null)
-  const [ruleDialog, setRuleDialog] = useState<{ evidenceIds: string[] } | null>(null)
-
-  const matchingRules = useMemo(
-    () => rulesMatchingSituation(personalRules, situation || description),
-    [personalRules, situation, description],
-  )
-
-  const beliefOptions = useMemo(
-    () =>
-      beliefs
-        .filter((belief) => belief.status !== 'replaced' && belief.status !== 'retired')
-        .map((belief) => ({ id: belief.id, label: belief.statement })),
-    [beliefs],
-  )
-
-  const hypothesisOptions = useMemo(
-    () =>
-      hypotheses
-        .filter((hypothesis) => hypothesis.status !== 'retired')
-        .map((hypothesis) => ({ id: hypothesis.id, label: hypothesis.statement })),
-    [hypotheses],
-  )
-
-  const number = (value: string) => {
-    const parsed = Number(value)
-    return value.trim() === '' || Number.isNaN(parsed) ? undefined : parsed
+  const updateAnalysis = (patch: Partial<ReflectionAnalysis>) => {
+    setDraft((current) =>
+      current.analysis ? { ...current, analysis: { ...current.analysis, ...patch } } : current,
+    )
   }
 
-  const reset = () => {
-    setDescription('')
-    setInterpretation('')
-    setOccurredAt('')
-    setContext({ tags: [] })
-    setEnergyBefore('')
-    setEnergyAfter('')
-    setMoodBefore('')
-    setMoodAfter('')
-    setAttempt('')
-    setThoughtIds([])
-    setBeliefIds([])
-    setHypothesisIds([])
-    setModelChange('none')
-    setKeep('evidence')
-  }
+  const begin = () => {
+    const text = draft.originalEntry.trim()
+    if (!text) return
+    const locale = getActiveLocale()
+    const fallback = createFallbackAnalysis(text, locale)
+    const currentRequest = ++requestId.current
+    setDraft((current) => ({
+      ...current,
+      originalEntry: text,
+      analysis: fallback,
+      helpMode: fallback.recommended_mode,
+      actions: fallback.actions,
+      step: 'reviewing_understanding',
+      modelState: 'loading',
+    }))
+    setModelNote('Preparing a private on-device reading… You can continue now.')
 
-  const save = () => {
-    const tags = keep === 'later' ? [...context.tags, REVIEW_LATER_TAG] : context.tags
-    const observationId = addObservation({
-      description,
-      occurredAt: occurredAt ? new Date(occurredAt).toISOString() : undefined,
-      context: { ...context, tags },
-      energyBefore: number(energyBefore),
-      energyAfter: number(energyAfter),
-      moodBefore: number(moodBefore),
-      moodAfter: number(moodAfter),
-      title: attempt.trim() || undefined,
-      relatedThoughtIds: thoughtIds,
+    void analyzeReflection(text, locale, (progress) => {
+      if (requestId.current === currentRequest) setModelNote(progress)
     })
+      .then((analysis) => {
+        if (requestId.current !== currentRequest) return
+        setDraft((current) => {
+          if (current.originalEntry !== text || current.step === 'capture' || editing) return current
+          return {
+            ...current,
+            analysis,
+            helpMode: analysis.recommended_mode,
+            actions: analysis.actions,
+            modelState: 'ready',
+          }
+        })
+        setModelNote('On-device suggestions are ready.')
+      })
+      .catch(() => {
+        if (requestId.current !== currentRequest) return
+        setDraft((current) => ({ ...current, modelState: 'fallback' }))
+        setModelNote('On-device suggestions are unavailable. The simple version is ready to use.')
+      })
+  }
 
-    if (!observationId) {
-      showToast('Write down what happened first.')
-      return
+  const confirmUnderstanding = () => {
+    setEditing(false)
+    setDraft((current) => ({ ...current, step: 'choosing_help_mode' }))
+  }
+
+  const chooseHelpMode = (mode: ReflectionHelpMode) => {
+    requestId.current += 1
+    setDraft((current) => ({ ...current, helpMode: mode }))
+  }
+
+  const continueToActions = () => {
+    setDraft((current) => {
+      if (!current.analysis) return current
+      const effective =
+        current.helpMode === 'recommend' ? current.analysis.recommended_mode : current.helpMode
+      const actions =
+        effective === current.analysis.recommended_mode
+          ? current.analysis.actions.slice(0, 3)
+          : fallbackActions(effective, getActiveLocale())
+      return { ...current, actions, step: 'choosing_action' }
+    })
+  }
+
+  const chooseAction = (action: ReflectionAction) => {
+    setStarted(false)
+    setDraft((current) => ({ ...current, selectedAction: action, step: 'focusing' }))
+  }
+
+  const makeSmaller = () => {
+    const selected = draft.selectedAction
+    if (!selected) return
+    const deterministic = reduceAction(selected.action, getActiveLocale())
+    const smaller =
+      deterministic ??
+      tx(
+        'Open the place where this action would begin.',
+        '打开这个行动会开始的页面或物品。',
+        {},
+      )
+    setDraft((current) => ({
+      ...current,
+      selectedAction: {
+        ...selected,
+        label: tx('A smaller version', '再小一点', {}),
+        action: smaller,
+        energy_level: 'very_low',
+        estimated_minutes: Math.min(2, selected.estimated_minutes),
+      },
+    }))
+    setStarted(false)
+
+    // Only ask the local model when the predictable reductions (split a
+    // compound action, lower a count or duration) could not safely help.
+    if (!deterministic) {
+      const request = ++requestId.current
+      void makeActionSmallerWithModel(selected.action, getActiveLocale())
+        .then((modelAction) => {
+          if (requestId.current !== request) return
+          setDraft((current) =>
+            current.step === 'focusing' && current.selectedAction?.action === smaller
+              ? {
+                  ...current,
+                  selectedAction: { ...current.selectedAction, action: modelAction },
+                }
+              : current,
+          )
+        })
+        .catch(() => {
+          // The deterministic generic reduction already shown remains usable.
+        })
     }
+  }
 
-    // Interpretation is optional: an observation on its own is a complete
-    // entry, and the app must not decide what it means.
-    let evidenceId: string | null = null
-    if (interpretation.trim()) {
-      evidenceId = addEvidence({
-        statement: interpretation,
-        observationIds: [observationId],
-        supportingObservationIds: modelChange === 'contradicts' ? [] : [observationId],
-        contradictingObservationIds: modelChange === 'contradicts' ? [observationId] : [],
-        relatedThoughtIds: thoughtIds,
-        context: { ...context, tags },
+  const saveOptionalReflection = () => {
+    let observationId: string | null = null
+    if (saveObservation || saveEvidence || reviewLater) {
+      observationId = addObservation({
+        description: draft.originalEntry,
+        title: draft.selectedAction?.action,
+        context: { tags: reviewLater ? ['review later'] : [] },
       })
     }
-
-    if (evidenceId) {
-      for (const beliefId of beliefIds) {
-        const belief = beliefs.find((entry) => entry.id === beliefId)
-        if (!belief) continue
-        const weakens = modelChange === 'weakens' || modelChange === 'contradicts'
-        updateBelief(beliefId, {
-          evidenceIds: weakens ? belief.evidenceIds : [...belief.evidenceIds, evidenceId],
-          contradictingEvidenceIds: weakens
-            ? [...(belief.contradictingEvidenceIds ?? []), evidenceId]
-            : (belief.contradictingEvidenceIds ?? []),
-          status: weakens ? 'uncertain' : belief.status,
-        })
-      }
-      for (const hypothesisId of hypothesisIds) {
-        const hypothesis = hypotheses.find((entry) => entry.id === hypothesisId)
-        if (!hypothesis) continue
-        const contradicts = modelChange === 'contradicts'
-        updateHypothesis(hypothesisId, {
-          evidenceIds: contradicts
-            ? hypothesis.evidenceIds
-            : [...hypothesis.evidenceIds, evidenceId],
-          contradictingEvidenceIds: contradicts
-            ? [...(hypothesis.contradictingEvidenceIds ?? []), evidenceId]
-            : (hypothesis.contradictingEvidenceIds ?? []),
-          status: contradicts ? 'contradicted' : 'partiallySupported',
-        })
-      }
+    if (saveEvidence && evidenceStatement.trim()) {
+      addEvidence({
+        statement: evidenceStatement,
+        observationIds: observationId ? [observationId] : [],
+        supportingObservationIds: observationId ? [observationId] : [],
+        contradictingObservationIds: [],
+      })
     }
-
-    const evidenceIds = evidenceId ? [evidenceId] : []
-    const wantsBeliefUpdate =
-      modelChange === 'weakens' ||
-      modelChange === 'contradicts' ||
-      modelChange === 'newBelief'
-    const wantsRule = keep === 'rule'
-
+    if (saveStrategy && strategy.trim()) {
+      addPersonalRule({
+        name: tx('A step that may help', '一个可能有帮助的做法', {}),
+        triggerDescription: draft.analysis?.situation ?? draft.originalEntry,
+        defaultResponse: strategy,
+        evidenceIds: [],
+      })
+    }
     showToast('Saved.')
-    reset()
-
-    // Both can be wanted at once; the rule form follows the belief update.
-    if (wantsBeliefUpdate) setBeliefDialog({ evidenceIds, thenRule: wantsRule })
-    else if (wantsRule) setRuleDialog({ evidenceIds })
+    window.localStorage.removeItem(storageKey(workspaceId))
+    requestId.current += 1
+    setDraft(EMPTY_DRAFT)
+    setEvidenceStatement('')
+    setStrategy('')
+    setSaveEvidence(false)
+    setSaveStrategy(false)
+    setReviewLater(false)
   }
 
+  const progress = useMemo(() => {
+    const order: ReflectionStep[] = [
+      'capture',
+      'reviewing_understanding',
+      'choosing_help_mode',
+      'choosing_action',
+      'focusing',
+      'recording_outcome',
+      'optional_reflection',
+    ]
+    return order.indexOf(draft.step) + 1
+  }, [draft.step])
+
   return (
-    <div className="stack" style={{ maxWidth: '48rem' }}>
-      <div className="screen-header">
-        <h1>Reflect</h1>
-        <p>
-          Something happened. Write it down before deciding what it means — the two are easier to
-          tell apart afterwards.
-        </p>
+    <div className="reflection-flow">
+      <div className="reflection-flow__header">
+        <div>
+          <span className="reflection-flow__eyebrow">
+            {tx('Reflect · Step {step} of 7', '回顾 · 第 {step} 步，共 7 步', { step: progress })}
+          </span>
+          <h1>{draft.step === 'capture' ? 'Find one next step' : 'Reflect'}</h1>
+        </div>
+        {draft.step !== 'capture' && (
+          <button
+            type="button"
+            className="button button--quiet button--small"
+            onClick={() => {
+              requestId.current += 1
+              setDraft(EMPTY_DRAFT)
+            }}
+          >
+            Start over
+          </button>
+        )}
       </div>
 
-      <section className="card stack">
-        <h2>1 · What happened?</h2>
-        <div className="field">
-          <label htmlFor="reflect-description">In your own words</label>
-          <textarea
-            id="reflect-description"
-            className="textarea"
-            value={description}
-            placeholder="After I left the house, I became more willing to move."
-            onChange={(event) => setDescription(event.target.value)}
-          />
-          <span className="faint">One sentence is enough. Everything below is optional.</span>
-        </div>
-
-        <details>
-          <summary>Add context</summary>
-          <div className="stack" style={{ marginTop: 'var(--space-3)' }}>
-            <div className="grid-2">
-              <div className="field">
-                <label htmlFor="reflect-when">When</label>
-                <input
-                  id="reflect-when"
-                  className="input"
-                  type="datetime-local"
-                  value={occurredAt}
-                  onChange={(event) => setOccurredAt(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-location">Where</label>
-                <input
-                  id="reflect-location"
-                  className="input"
-                  value={context.location ?? ''}
-                  onChange={(event) =>
-                    setContext((current) => ({ ...current, location: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-energy-before">Energy before</label>
-                <input
-                  id="reflect-energy-before"
-                  className="input"
-                  type="number"
-                  value={energyBefore}
-                  onChange={(event) => setEnergyBefore(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-energy-after">Energy after</label>
-                <input
-                  id="reflect-energy-after"
-                  className="input"
-                  type="number"
-                  value={energyAfter}
-                  onChange={(event) => setEnergyAfter(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-mood-before">Mood before</label>
-                <input
-                  id="reflect-mood-before"
-                  className="input"
-                  type="number"
-                  value={moodBefore}
-                  onChange={(event) => setMoodBefore(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-mood-after">Mood after</label>
-                <input
-                  id="reflect-mood-after"
-                  className="input"
-                  type="number"
-                  value={moodAfter}
-                  onChange={(event) => setMoodAfter(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-physical">Physical state</label>
-                <input
-                  id="reflect-physical"
-                  className="input"
-                  value={context.physicalState ?? ''}
-                  onChange={(event) =>
-                    setContext((current) => ({ ...current, physicalState: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reflect-social">Alone or with others</label>
-                <input
-                  id="reflect-social"
-                  className="input"
-                  value={context.socialContext ?? ''}
-                  onChange={(event) =>
-                    setContext((current) => ({ ...current, socialContext: event.target.value }))
-                  }
-                />
-              </div>
+      {draft.step === 'capture' && (
+        <section className="card reflection-stage reflection-stage--capture">
+          <div className="stack">
+            <div>
+              <h2>What is happening right now?</h2>
+              <p className="muted">Write it in any form. You do not need to organize it first.</p>
             </div>
-
             <div className="field">
-              <label htmlFor="reflect-attempt">What were you trying to do?</label>
-              <input
-                id="reflect-attempt"
-                className="input"
-                value={attempt}
-                onChange={(event) => setAttempt(event.target.value)}
+              <label className="visually-hidden" htmlFor="reflection-entry">
+                What is happening right now?
+              </label>
+              <textarea
+                id="reflection-entry"
+                className="textarea reflection-entry"
+                autoFocus
+                value={draft.originalEntry}
+                placeholder="Start wherever it feels easiest…"
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, originalEntry: event.target.value }))
+                }
+                onKeyDown={(event) => {
+                  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') begin()
+                }}
               />
             </div>
-
-            <div className="field">
-              <span className="label">Tags</span>
-              <div className="row">
-                {context.tags.map((tag) => (
-                  <span key={tag} className="chip chip--accent">
-                    {tag}
-                    <button
-                      type="button"
-                      className="button button--quiet button--small"
-                      aria-label={tx('Remove tag {tag}', '移除标签“{tag}”', { tag })}
-                      onClick={() =>
-                        setContext((current) => ({
-                          ...current,
-                          tags: current.tags.filter((entry) => entry !== tag),
-                        }))
-                      }
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="row" style={{ flexWrap: 'nowrap' }}>
-                <input
-                  className="input"
-                  aria-label="New tag"
-                  value={tagDraft}
-                  placeholder="energy, movement, decisions…"
-                  onChange={(event) => setTagDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter') return
-                    event.preventDefault()
-                    const tag = tagDraft.trim()
-                    if (!tag) return
-                    setContext((current) =>
-                      current.tags.includes(tag)
-                        ? current
-                        : { ...current, tags: [...current.tags, tag] },
-                    )
-                    setTagDraft('')
-                  }}
-                />
-              </div>
-              <span className="faint">
-                Tags are how a record finds its way back to you later.
-              </span>
+            <div className="spread reflection-stage__footer">
+              <span className="faint">Your words stay in this browser.</span>
+              <button
+                type="button"
+                className="button button--primary"
+                disabled={!draft.originalEntry.trim()}
+                onClick={begin}
+              >
+                Help me find the next step
+              </button>
             </div>
           </div>
-        </details>
-      </section>
+        </section>
+      )}
 
-      <section className="card stack">
-        <h2>2 · Observation and interpretation</h2>
-        <p className="faint">
-          The first field is what happened. The second is what you make of it. Keeping them apart
-          means you can change your mind later without losing the record.
-        </p>
-        <div className="field">
-          <label htmlFor="reflect-observed">What did you directly observe?</label>
-          <textarea
-            id="reflect-observed"
-            className="textarea"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="reflect-meaning">What do you think this may indicate?</label>
-          <textarea
-            id="reflect-meaning"
-            className="textarea"
-            value={interpretation}
-            placeholder="Changing environments may help me regain movement motivation."
-            onChange={(event) => setInterpretation(event.target.value)}
-          />
-          <span className="faint">
-            Optional, and provisional. This is your reading of one experience, not a conclusion.
-          </span>
-        </div>
-      </section>
+      {draft.step === 'reviewing_understanding' && draft.analysis && (
+        <section className="card reflection-stage" aria-labelledby="understanding-heading">
+          <div className="reflection-stage__intro">
+            <span className="reflection-stage__number">01</span>
+            <div>
+              <h2 id="understanding-heading">Is this understanding close?</h2>
+              <p className="muted">
+                Observations come from your words. Possible blockers are tentative interpretations.
+              </p>
+            </div>
+          </div>
 
-      <section className="card stack">
-        <h2>3 · Connect it</h2>
-        <ThoughtLinkPicker
-          label="Related thoughts"
-          selectedIds={thoughtIds}
-          onChange={setThoughtIds}
-          hint="Values, goals, habits, actions, decisions, problems — whatever this touches."
-        />
-        <RecordPicker
-          label="Related beliefs"
-          options={beliefOptions}
-          selectedIds={beliefIds}
-          onChange={setBeliefIds}
-          emptyText="No beliefs recorded yet."
-        />
-        <RecordPicker
-          label="Related hypotheses"
-          options={hypothesisOptions}
-          selectedIds={hypothesisIds}
-          onChange={setHypothesisIds}
-          emptyText="No hypotheses recorded yet."
-        />
+          <div className="understanding-grid">
+            <div className="understanding-block understanding-block--wide">
+              <span className="label">Situation</span>
+              {editing ? (
+                <input
+                  className="input"
+                  aria-label="Situation"
+                  value={draft.analysis.situation}
+                  onChange={(event) => updateAnalysis({ situation: event.target.value })}
+                />
+              ) : (
+                <p>{draft.analysis.situation}</p>
+              )}
+            </div>
+            <div className="understanding-block understanding-block--wide">
+              <span className="label">Desired outcome</span>
+              {editing ? (
+                <input
+                  className="input"
+                  aria-label="Desired outcome"
+                  value={draft.analysis.desired_outcome}
+                  onChange={(event) => updateAnalysis({ desired_outcome: event.target.value })}
+                />
+              ) : (
+                <p>{draft.analysis.desired_outcome}</p>
+              )}
+            </div>
+            <div className="understanding-block understanding-block--observed">
+              <span className="understanding-block__kind">Directly observed</span>
+              {editing ? (
+                <textarea
+                  className="textarea"
+                  aria-label="Directly observed signals"
+                  value={draft.analysis.observations.join('\n')}
+                  onChange={(event) =>
+                    updateAnalysis({
+                      observations: event.target.value.split('\n').filter(Boolean).slice(0, 5),
+                    })
+                  }
+                />
+              ) : (
+                <ul className="reflection-list">
+                  {draft.analysis.observations.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
+            </div>
+            <div className="understanding-block understanding-block--possible">
+              <span className="understanding-block__kind">Possible interpretations</span>
+              {editing ? (
+                <textarea
+                  className="textarea"
+                  aria-label="Possible blockers"
+                  value={draft.analysis.possible_blockers.map((item) => item.description).join('\n')}
+                  onChange={(event) =>
+                    updateAnalysis({
+                      possible_blockers: event.target.value
+                        .split('\n')
+                        .filter(Boolean)
+                        .slice(0, 4)
+                        .map((description) => ({
+                          type: 'user_edit',
+                          description,
+                          confidence: 'medium',
+                        })),
+                    })
+                  }
+                />
+              ) : draft.analysis.possible_blockers.length ? (
+                <ul className="reflection-list">
+                  {draft.analysis.possible_blockers.map((item) => (
+                    <li key={`${item.type}-${item.description}`}>{item.description}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="faint">No blocker is being assumed.</p>
+              )}
+            </div>
+          </div>
 
-        {thoughtIds.map((thoughtId) => (
-          <RelevantLearning
-            key={thoughtId}
-            thoughtId={thoughtId}
-            heading="What you have already learned about this"
-          />
-        ))}
-      </section>
+          <details className="original-entry">
+            <summary>Your original words</summary>
+            <p>{draft.originalEntry}</p>
+          </details>
 
-      <section className="card stack">
-        <h2>4 · Did this change how you understand yourself or the situation?</h2>
-        <div className="stack" style={{ gap: 'var(--space-1)' }}>
-          {MODEL_CHANGES.map((option) => (
-            <label key={option.value} className="checkbox-row">
-              <input
-                type="radio"
-                name="model-change"
-                checked={modelChange === option.value}
-                onChange={() => setModelChange(option.value)}
-              />
-              <span>{option.label}</span>
-            </label>
-          ))}
-        </div>
-        <p className="faint">
-          Choosing one of the belief options opens the update form after saving. Your previous
-          belief is kept either way.
-        </p>
-      </section>
+          <div className="model-status" role="status">
+            <span className={`model-status__dot model-status__dot--${draft.modelState}`} />
+            <span>{modelNote}</span>
+          </div>
+          <div className="row reflection-stage__actions">
+            <button type="button" className="button button--primary" onClick={confirmUnderstanding}>
+              Yes, that is right
+            </button>
+            <button
+              type="button"
+              className="button button--secondary"
+              aria-pressed={editing}
+              onClick={() => {
+                requestId.current += 1
+                setEditing((value) => !value)
+              }}
+            >
+              {editing ? 'Finish editing' : 'Edit'}
+            </button>
+          </div>
+        </section>
+      )}
 
-      <section className="card stack">
-        <h2>5 · Would this be useful to remember in a similar situation?</h2>
-        <div className="stack" style={{ gap: 'var(--space-1)' }}>
-          {KEEP_OPTIONS.map((option) => (
-            <label key={option.value} className="checkbox-row">
-              <input
-                type="radio"
-                name="keep"
-                checked={keep === option.value}
-                onChange={() => setKeep(option.value)}
-              />
-              <span>{option.label}</span>
-            </label>
-          ))}
-        </div>
-        <p className="faint">Most observations are not rules. It is fine to leave it here.</p>
-      </section>
+      {draft.step === 'choosing_help_mode' && draft.analysis && (
+        <section className="card reflection-stage">
+          <div className="reflection-stage__intro">
+            <span className="reflection-stage__number">02</span>
+            <div>
+              <h2>What would help most right now?</h2>
+              <p className="muted">Choose one. You can change it on the next screen.</p>
+            </div>
+          </div>
+          <div className="choice-list" role="group" aria-label="Kind of help">
+            {HELP_MODES.map((mode) => {
+              const recommended = mode.value === draft.analysis?.recommended_mode
+              return (
+                <button
+                  type="button"
+                  key={mode.value}
+                  className="choice-row"
+                  aria-pressed={draft.helpMode === mode.value}
+                  onClick={() => chooseHelpMode(mode.value)}
+                >
+                  <span className="choice-row__marker" aria-hidden="true" />
+                  <span>{mode.label}</span>
+                  {recommended && <span className="chip chip--accent">Suggested</span>}
+                </button>
+              )
+            })}
+          </div>
+          <button type="button" className="button button--primary" onClick={continueToActions}>
+            Show small actions
+          </button>
+        </section>
+      )}
 
-      <div className="row">
-        <button
-          type="button"
-          className="button button--primary"
-          disabled={description.trim().length === 0}
-          onClick={save}
-        >
-          Save this reflection
-        </button>
-        <Link className="button button--quiet" to="/evidence">
-          Evidence inbox
-        </Link>
-      </div>
-
-      <section className="card stack">
-        <h2>Check your defaults</h2>
-        <p className="faint">
-          Describe the situation you are in. Anything you have written down before that matches
-          will appear — nothing is watching in the background.
-        </p>
-        <div className="field">
-          <label htmlFor="reflect-situation">Where are you right now?</label>
-          <input
-            id="reflect-situation"
-            className="input"
-            value={situation}
-            placeholder="Low energy, been deciding for half an hour"
-            onChange={(event) => setSituation(event.target.value)}
-          />
-        </div>
-        {matchingRules.length === 0 ? (
-          <p className="faint">Nothing you have recorded matches yet.</p>
-        ) : (
-          <ul className="stack" style={{ gap: 'var(--space-2)' }}>
-            {matchingRules.map((rule) => (
-              <li key={rule.id}>
-                <strong>{rule.name}</strong>
-                <p style={{ margin: 0 }}>{rule.defaultResponse}</p>
-                <p className="faint" style={{ margin: 0 }}>
-                  When {rule.triggerDescription}
-                </p>
-              </li>
+      {draft.step === 'choosing_action' && (
+        <section className="reflection-stage">
+          <div className="reflection-stage__intro">
+            <span className="reflection-stage__number">03</span>
+            <div>
+              <h2>Choose the size that fits today</h2>
+              <p className="muted">Each option is a complete next step. Smaller is still useful.</p>
+            </div>
+          </div>
+          <div className="action-options">
+            {draft.actions.slice(0, 3).map((action) => (
+              <button
+                type="button"
+                key={`${action.energy_level}-${action.action}`}
+                className="card action-option"
+                onClick={() => chooseAction(action)}
+              >
+                <span className={`energy-mark energy-mark--${action.energy_level}`} />
+                <span className="action-option__energy">
+                  {ENERGY_COPY[action.energy_level].name}
+                </span>
+                <strong>{action.action}</strong>
+                <span className="faint">{ENERGY_COPY[action.energy_level].detail}</span>
+                <span className="action-option__choose">Choose this →</span>
+              </button>
             ))}
-          </ul>
-        )}
-      </section>
+          </div>
+          <button
+            type="button"
+            className="button button--quiet"
+            onClick={() => setDraft((current) => ({ ...current, step: 'choosing_help_mode' }))}
+          >
+            Choose a different kind of help
+          </button>
+        </section>
+      )}
 
-      {beliefDialog ? (
-        <BeliefUpdateDialog
-          presetEvidenceIds={beliefDialog.evidenceIds}
-          onClose={() => {
-            if (beliefDialog.thenRule) setRuleDialog({ evidenceIds: beliefDialog.evidenceIds })
-            setBeliefDialog(null)
-          }}
-        />
-      ) : null}
+      {draft.step === 'focusing' && draft.selectedAction && (
+        <section className="card focus-card">
+          <span className="focus-card__label">Only do this now:</span>
+          <h2>{draft.selectedAction.action}</h2>
+          <span className="faint">
+            {tx(
+              'About {minutes} minutes',
+              '大约 {minutes} 分钟',
+              { minutes: draft.selectedAction.estimated_minutes },
+            )}
+          </span>
+          <div className="row focus-card__actions">
+            {!started && (
+              <button type="button" className="button button--primary" onClick={() => setStarted(true)}>
+                Start
+              </button>
+            )}
+            <button
+              type="button"
+              className={started ? 'button button--primary' : 'button button--secondary'}
+              onClick={() =>
+                setDraft((current) => ({ ...current, step: 'recording_outcome' }))
+              }
+            >
+              Done
+            </button>
+            <button type="button" className="button button--quiet" onClick={makeSmaller}>
+              Still too difficult — make it smaller
+            </button>
+            <button
+              type="button"
+              className="button button--quiet"
+              onClick={() => setDraft((current) => ({ ...current, step: 'choosing_action' }))}
+            >
+              Choose another action
+            </button>
+          </div>
+          {started && <p className="focus-card__started" role="status">Started. Nothing else is required right now.</p>}
+        </section>
+      )}
 
-      {ruleDialog ? (
-        <PersonalRuleDialog
-          presetEvidenceIds={ruleDialog.evidenceIds}
-          onClose={() => setRuleDialog(null)}
-        />
-      ) : null}
+      {draft.step === 'recording_outcome' && (
+        <section className="card reflection-stage">
+          <div>
+            <h2>What changed after taking this step?</h2>
+            <p className="muted">One tap is enough.</p>
+          </div>
+          <div className="choice-list" role="group" aria-label="What changed">
+            {OUTCOMES.map((outcome) => (
+              <button
+                type="button"
+                key={outcome.value}
+                className="choice-row"
+                aria-pressed={draft.outcome === outcome.value}
+                onClick={() => setDraft((current) => ({ ...current, outcome: outcome.value }))}
+              >
+                <span className="choice-row__marker" aria-hidden="true" />
+                <span>{outcome.label}</span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={!draft.outcome}
+            onClick={() => {
+              setEvidenceStatement(
+                draft.outcome === 'easier'
+                  ? tx(
+                      'This small action made it easier to continue.',
+                      '这个小行动让继续做下去变得容易了一些。',
+                      {},
+                    )
+                  : '',
+              )
+              setStrategy(draft.selectedAction?.action ?? '')
+              setDraft((current) => ({ ...current, step: 'optional_reflection' }))
+            }}
+          >
+            Continue
+          </button>
+        </section>
+      )}
+
+      {draft.step === 'optional_reflection' && (
+        <section className="card reflection-stage">
+          <div>
+            <span className="reflection-stage__eyebrow">Optional</span>
+            <h2>Would you like to keep anything from this?</h2>
+            <p className="muted">You can save one item, several, or nothing.</p>
+          </div>
+          <div className="optional-save-list">
+            <label className="optional-save">
+              <input
+                type="checkbox"
+                checked={saveObservation}
+                onChange={(event) => setSaveObservation(event.target.checked)}
+              />
+              <span><strong>Observation</strong><small>Keep your original words unchanged.</small></span>
+            </label>
+            <label className="optional-save">
+              <input
+                type="checkbox"
+                checked={saveEvidence}
+                onChange={(event) => setSaveEvidence(event.target.checked)}
+              />
+              <span><strong>Supporting evidence</strong><small>Save what this experience may indicate.</small></span>
+            </label>
+            {saveEvidence && (
+              <div className="field optional-save__field">
+                <label htmlFor="reflection-evidence">What might this experience support?</label>
+                <textarea
+                  id="reflection-evidence"
+                  className="textarea"
+                  value={evidenceStatement}
+                  onChange={(event) => setEvidenceStatement(event.target.value)}
+                />
+              </div>
+            )}
+            <label className="optional-save">
+              <input
+                type="checkbox"
+                checked={saveStrategy}
+                onChange={(event) => setSaveStrategy(event.target.checked)}
+              />
+              <span><strong>Reusable strategy</strong><small>Keep the action as something to try in a similar situation.</small></span>
+            </label>
+            {saveStrategy && (
+              <div className="field optional-save__field">
+                <label htmlFor="reflection-strategy">Strategy to remember</label>
+                <input
+                  id="reflection-strategy"
+                  className="input"
+                  value={strategy}
+                  onChange={(event) => setStrategy(event.target.value)}
+                />
+              </div>
+            )}
+            <label className="optional-save">
+              <input
+                type="checkbox"
+                checked={reviewLater}
+                onChange={(event) => setReviewLater(event.target.checked)}
+              />
+              <span><strong>Reminder to review later</strong><small>Mark this observation for the evidence inbox.</small></span>
+            </label>
+          </div>
+
+          <details className="progressive-details">
+            <summary>Beliefs and model building</summary>
+            <p className="faint">
+              Belief updates are available after saving evidence. They are optional and never
+              replace the original experience.
+            </p>
+            <div className="row">
+              <Link className="button button--quiet button--small" to="/evidence">Evidence inbox</Link>
+              <Link className="button button--quiet button--small" to="/model">Review beliefs</Link>
+            </div>
+          </details>
+
+          <div className="row">
+            <button type="button" className="button button--primary" onClick={saveOptionalReflection}>
+              Save selected items
+            </button>
+            <button
+              type="button"
+              className="button button--quiet"
+              onClick={() => {
+                window.localStorage.removeItem(storageKey(workspaceId))
+                setDraft(EMPTY_DRAFT)
+              }}
+            >
+              Finish without saving
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
+    "@mlc-ai/web-llm": "^0.2.84",
     "@xyflow/react": "^12.11.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
