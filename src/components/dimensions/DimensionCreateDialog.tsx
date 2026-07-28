@@ -4,6 +4,7 @@ import { createId } from '../../domain/ids'
 import { suggestComparativeQuestion } from '../../domain/prompts'
 import type { DimensionKind, DimensionOption, DimensionStage } from '../../domain/types'
 import { useStore } from '../../store'
+import { tx } from '../../i18n/core'
 
 const KIND_LABEL: Record<DimensionKind, string> = {
   binary: 'Two choices (a quadrant axis)',
@@ -83,7 +84,11 @@ export function DimensionCreateDialog({
     const parsedStep = Number(step)
     const id = addDimension({
       name: trimmedName,
-      question: question.trim() || `How would you rate ${trimmedName.toLowerCase()}?`,
+      question:
+        question.trim() ||
+        tx('How would you rate {name}?', '你会如何评价“{name}”？', {
+          name: trimmedName.toLowerCase(),
+        }),
       comparativeQuestion:
         comparativeQuestion.trim() || suggestComparativeQuestion(trimmedName),
       description: description.trim() || undefined,
@@ -106,7 +111,7 @@ export function DimensionCreateDialog({
       stage,
     })
     if (!id) return
-    showToast(`“${trimmedName}” created.`)
+    showToast(tx('“{name}” created.', '“{name}”已创建。', { name: trimmedName }))
     onCreated?.(id)
     onClose()
   }

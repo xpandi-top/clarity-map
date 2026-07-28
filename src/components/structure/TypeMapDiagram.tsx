@@ -15,6 +15,7 @@ import {
   type TypeMapNode,
 } from '../../domain/typeMap'
 import type { ThoughtType } from '../../domain/types'
+import { t, tx } from '../../i18n/core'
 
 interface TypeMapDiagramProps {
   simplified: boolean
@@ -129,7 +130,17 @@ export function TypeMapDiagram({
             role="button"
             tabIndex={0}
             aria-pressed={isSelected}
-            aria-label={`${THOUGHT_TYPE_LABEL[node.type]}, ${groupLabelOfType(node.type)}, ${count} thought${count === 1 ? '' : 's'}`}
+            aria-label={tx(
+              count === 1
+                ? '{type}, {group}, {count} thought'
+                : '{type}, {group}, {count} thoughts',
+              '{type}，{group}，{count} 条想法',
+              {
+                type: t(THOUGHT_TYPE_LABEL[node.type]),
+                group: t(groupLabelOfType(node.type)),
+                count,
+              },
+            )}
             className={`type-map__node${isSelected ? ' is-selected' : ''}`}
             onClick={() => onSelect(node.type)}
             onKeyDown={(event) => {
@@ -162,7 +173,13 @@ export function TypeMapDiagram({
               textAnchor="middle"
               className="type-map__node-count"
             >
-              {count === 0 ? 'none yet' : `${count} thought${count === 1 ? '' : 's'}`}
+              {count === 0
+                ? 'none yet'
+                : tx(
+                    count === 1 ? '{count} thought' : '{count} thoughts',
+                    '{count} 条想法',
+                    { count },
+                  )}
             </text>
           </g>
         )

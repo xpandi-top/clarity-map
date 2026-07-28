@@ -1,3 +1,5 @@
+import { t, tx } from '../../i18n/core'
+
 export type CollectionViewMode = 'list' | 'focus'
 
 export function CollectionBrowser({
@@ -18,7 +20,10 @@ export function CollectionBrowser({
   onNext: () => void
 }) {
   return (
-    <div className="collection-browser" aria-label={`${itemLabel} view`}>
+    <div
+      className="collection-browser"
+      aria-label={tx('{item} view', '{item}视图', { item: t(itemLabel) })}
+    >
       <div className="collection-browser__modes" role="group" aria-label="Display">
         <span className="collection-browser__label">View</span>
         <button
@@ -44,7 +49,7 @@ export function CollectionBrowser({
           <button
             type="button"
             className="button button--small collection-browser__arrow"
-            aria-label={`Previous ${itemLabel}`}
+            aria-label={tx('Previous {item}', '上一个{item}', { item: t(itemLabel) })}
             aria-keyshortcuts="ArrowLeft"
             disabled={index === 0}
             onClick={onPrevious}
@@ -52,12 +57,15 @@ export function CollectionBrowser({
             <span aria-hidden="true">←</span>
           </button>
           <span className="collection-browser__position" role="status" aria-live="polite">
-            {index + 1} of {total}
+            {tx('{current} of {total}', '{current} / {total}', {
+              current: index + 1,
+              total,
+            })}
           </span>
           <button
             type="button"
             className="button button--small collection-browser__arrow"
-            aria-label={`Next ${itemLabel}`}
+            aria-label={tx('Next {item}', '下一个{item}', { item: t(itemLabel) })}
             aria-keyshortcuts="ArrowRight"
             disabled={index >= total - 1}
             onClick={onNext}

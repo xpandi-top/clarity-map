@@ -8,6 +8,7 @@ import {
   PERSONAL_RULE_STATUSES,
 } from './learning'
 import { backfillBuiltInPrompts } from './prompts'
+import { tx } from '../i18n/core'
 import type {
   Belief,
   BeliefStatus,
@@ -411,7 +412,11 @@ export function validateImport(input: unknown): ValidationResult<ExportEnvelope>
     errors.push('The file is missing a schema version.')
   } else if (schemaVersion > SCHEMA_VERSION) {
     errors.push(
-      `The file uses schema version ${schemaVersion}, which is newer than this app (version ${SCHEMA_VERSION}).`,
+      tx(
+        'The file uses schema version {fileVersion}, which is newer than this app (version {appVersion}).',
+        '该文件使用架构版本 {fileVersion}，高于当前应用版本（{appVersion}）。',
+        { fileVersion: schemaVersion, appVersion: SCHEMA_VERSION },
+      ),
     )
   }
   if (!isRecord(parsed.data) || !Array.isArray((parsed.data as Record<string, unknown>).workspaces)) {
@@ -424,12 +429,22 @@ export function validateImport(input: unknown): ValidationResult<ExportEnvelope>
 
   rawWorkspaces.forEach((entry, index) => {
     if (!isRecord(entry)) {
-      errors.push(`Workspace ${index + 1} is not a valid object.`)
+      errors.push(
+        tx('Workspace {number} is not a valid object.', '第 {number} 个工作区不是有效对象。', {
+          number: index + 1,
+        }),
+      )
       return
     }
     const workspace = coerceWorkspace(entry.workspace)
     if (!workspace) {
-      errors.push(`Workspace ${index + 1} is missing its workspace record.`)
+      errors.push(
+        tx(
+          'Workspace {number} is missing its workspace record.',
+          '第 {number} 个工作区缺少工作区记录。',
+          { number: index + 1 },
+        ),
+      )
       return
     }
     const thoughts = Array.isArray(entry.thoughts)
@@ -448,7 +463,11 @@ export function validateImport(input: unknown): ValidationResult<ExportEnvelope>
       createDefaultDimensions(),
     )
     if (dimensions.length === 0) {
-      errors.push(`Workspace “${workspace.name}” has no dimensions.`)
+      errors.push(
+        tx('Workspace “{name}” has no dimensions.', '工作区“{name}”没有维度。', {
+          name: workspace.name,
+        }),
+      )
       return
     }
     const thoughtIds = new Set(thoughts.map((thought) => thought.id))

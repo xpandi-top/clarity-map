@@ -26,6 +26,7 @@ import {
 } from '../../domain/typeMap'
 import type { ThoughtType } from '../../domain/types'
 import { useRelations, useStore, useVisibleThoughts } from '../../store'
+import { tx } from '../../i18n/core'
 
 export function StructureScreen() {
   const thoughts = useVisibleThoughts()
@@ -93,9 +94,17 @@ export function StructureScreen() {
             thoughts.length === 0
               ? 'No thoughts yet'
               : unclassified === 0
-                ? `All ${thoughts.length} thoughts have a type`
-                : `${classified} of ${thoughts.length} given a type · ${unclassified} still unclassified`,
-            typeFilter.length > 0 ? `showing ${visible.length}` : null,
+                ? tx('All {count} thoughts have a type', '全部 {count} 条想法均已分类', {
+                    count: thoughts.length,
+                  })
+                : tx(
+                    '{classified} of {total} given a type · {unclassified} still unclassified',
+                    '已分类 {classified} / {total} · 仍有 {unclassified} 条未分类',
+                    { classified, total: thoughts.length, unclassified },
+                  ),
+            typeFilter.length > 0
+              ? tx('showing {count}', '显示 {count} 条', { count: visible.length })
+              : null,
           ]
             .filter(Boolean)
             .join(' · ')}

@@ -23,6 +23,7 @@ import {
   useStore,
   useVisibleThoughts,
 } from "../../store";
+import { formatDate, tx } from "../../i18n/core";
 
 /**
  * Two questions side by side: what am I trying to do, and what have I worked
@@ -250,9 +251,11 @@ export function DashboardScreen() {
                         {update.updatedStatement}
                         <br />
                         <span className="faint">
-                          {new Date(update.createdAt).toLocaleDateString()}
+                          {formatDate(update.createdAt)}
                           {update.previousStatement
-                            ? ` · was: ${update.previousStatement}`
+                            ? tx(' · was: {text}', ' · 原认知：{text}', {
+                                text: update.previousStatement,
+                              })
                             : ""}
                         </span>
                       </li>
@@ -300,11 +303,19 @@ export function DashboardScreen() {
               </div>
 
               <p className="faint" style={{ margin: 0 }}>
-                {inboxOpenCount(inbox)} item
-                {inboxOpenCount(inbox) === 1 ? "" : "s"} awaiting review ·{" "}
-                {observations.length} observation
-                {observations.length === 1 ? "" : "s"} · {beliefs.length} belief
-                {beliefs.length === 1 ? "" : "s"}
+                {tx(
+                  `{items} ${
+                    inboxOpenCount(inbox) === 1 ? 'item' : 'items'
+                  } awaiting review · {observations} ${
+                    observations.length === 1 ? 'observation' : 'observations'
+                  } · {beliefs} ${beliefs.length === 1 ? 'belief' : 'beliefs'}`,
+                  '{items} 项待复查 · {observations} 条观察 · {beliefs} 条认知',
+                  {
+                    items: inboxOpenCount(inbox),
+                    observations: observations.length,
+                    beliefs: beliefs.length,
+                  },
+                )}
               </p>
             </>
           ) : null}

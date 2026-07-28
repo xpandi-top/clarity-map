@@ -5,6 +5,7 @@ import {
   findChoice,
 } from '../../domain/relationChoices'
 import { useStore, useThoughts } from '../../store'
+import { t, tx } from '../../i18n/core'
 
 interface RelationEditorProps {
   sourceThoughtId: string
@@ -56,7 +57,12 @@ export function RelationEditor({ sourceThoughtId, onDone }: RelationEditorProps)
       setMessage(result.reason ?? 'That relationship could not be added.')
       return
     }
-    const note = result.warning ?? `Linked: ${choice.label} ${trimmed}.`
+    const note =
+      result.warning ??
+      tx('Linked: {relation} {thought}.', '已连接：{relation}“{thought}”。', {
+        relation: t(choice.label),
+        thought: trimmed,
+      })
     setMessage(note)
     setTarget('')
     onDone?.(note)
@@ -106,7 +112,11 @@ export function RelationEditor({ sourceThoughtId, onDone }: RelationEditorProps)
         </datalist>
         <span className="faint">
           {trimmed && !existing
-            ? `“${trimmed}” does not exist yet and will be created.`
+            ? tx(
+                '“{thought}” does not exist yet and will be created.',
+                '“{thought}”尚不存在，将会创建。',
+                { thought: trimmed },
+              )
             : 'Choose an existing thought, or type a new one.'}
         </span>
       </div>

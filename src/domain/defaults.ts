@@ -7,6 +7,7 @@ import type {
   Workspace,
 } from './types'
 import { createId, nowIso } from './ids'
+import { t } from '../i18n/core'
 
 /** Stable ids for built-in dimensions. Referenced by rules, matrix, and tests. */
 export const BUILTIN_DIMENSION = {
@@ -126,7 +127,7 @@ export const UPWARD_RELATIONS: RelationType[] = [
 ]
 
 export function createDefaultDimensions(): Dimension[] {
-  return [
+  const dimensions: Dimension[] = [
     {
       id: BUILTIN_DIMENSION.motivation,
       name: 'Motivation source',
@@ -258,11 +259,23 @@ export function createDefaultDimensions(): Dimension[] {
       order: 7,
     },
   ]
+  return dimensions.map((dimension) => ({
+    ...dimension,
+    name: t(dimension.name),
+    question: t(dimension.question),
+    comparativeQuestion: dimension.comparativeQuestion
+      ? t(dimension.comparativeQuestion)
+      : undefined,
+    description: dimension.description ? t(dimension.description) : undefined,
+    lowLabel: dimension.lowLabel ? t(dimension.lowLabel) : undefined,
+    highLabel: dimension.highLabel ? t(dimension.highLabel) : undefined,
+    options: dimension.options?.map((entry) => ({ ...entry, label: t(entry.label) })),
+  }))
 }
 
 export function createDefaultRules(workspaceId: string): Rule[] {
   const createdAt = nowIso()
-  return [
+  const rules: Rule[] = [
     {
       id: createId('rule'),
       workspaceId,
@@ -333,13 +346,27 @@ export function createDefaultRules(workspaceId: string): Rule[] {
       actions: [{ type: 'addTag', value: 'High leverage' }],
     },
   ]
+  return rules.map((rule) => ({
+    ...rule,
+    name: t(rule.name),
+    actions: rule.actions.map((action) => {
+      if (
+        action.type === 'flag' ||
+        action.type === 'addTag' ||
+        action.type === 'removeTag'
+      ) {
+        return { ...action, value: t(action.value) }
+      }
+      return action
+    }),
+  }))
 }
 
-export function createWorkspace(name = 'My thoughts'): Workspace {
+export function createWorkspace(name?: string): Workspace {
   const timestamp = nowIso()
   return {
     id: createId('ws'),
-    name,
+    name: name ?? t('My thoughts'),
     createdAt: timestamp,
     updatedAt: timestamp,
     currentStage: 'capture',

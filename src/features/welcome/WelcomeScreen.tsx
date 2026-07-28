@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { validateImport } from '../../domain/validation'
 import { useStore } from '../../store'
+import { formatDate, tx } from '../../i18n/core'
 
 /**
  * The two loops as doors, not as a diagram.
@@ -70,7 +71,13 @@ export function WelcomeScreen() {
       return
     }
     const count = importEnvelope(result.value, 'merge')
-    showToast(`Imported ${count} workspace${count === 1 ? '' : 's'}.`)
+    showToast(
+      tx(
+        count === 1 ? 'Imported {count} workspace.' : 'Imported {count} workspaces.',
+        '已导入 {count} 个工作区。',
+        { count },
+      ),
+    )
     navigate('/dashboard')
   }
 
@@ -103,7 +110,7 @@ export function WelcomeScreen() {
             <span className="start-card__label">Pick up where you left off</span>
             <h2>{mostRecent.name}</h2>
             <p className="faint">
-              Updated {new Date(mostRecent.updatedAt).toLocaleDateString()}
+              Updated {formatDate(mostRecent.updatedAt)}
             </p>
           </div>
           <button
@@ -215,7 +222,7 @@ export function WelcomeScreen() {
                   {workspace.name}
                   <span className="faint">
                     {' '}
-                    · updated {new Date(workspace.updatedAt).toLocaleDateString()}
+                    · updated {formatDate(workspace.updatedAt)}
                   </span>
                 </span>
                 <button

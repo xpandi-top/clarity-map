@@ -23,6 +23,7 @@ import { RELATION_STYLE } from '../../domain/relationStyle'
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from '../../domain/roadmapLayout'
 import { groupLabelOfType, styleOfType } from '../../domain/typeMap'
 import type { Thought, ThoughtRelation } from '../../domain/types'
+import { t, tx } from '../../i18n/core'
 
 type RoadmapNodeData = {
   label: string
@@ -109,9 +110,13 @@ function buildNodes(
       data: {
         label: thought.text,
         meta: [
-          THOUGHT_TYPE_LABEL[thought.type],
-          level !== undefined && level > 0 ? `Level ${level}` : null,
-          typeof priority === 'number' ? `Priority ${priority}` : null,
+          t(THOUGHT_TYPE_LABEL[thought.type]),
+          level !== undefined && level > 0
+            ? tx('Level {level}', '第 {level} 层', { level })
+            : null,
+          typeof priority === 'number'
+            ? tx('Priority {priority}', '优先级 {priority}', { priority })
+            : null,
         ]
           .filter(Boolean)
           .join(' · '),

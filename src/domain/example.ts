@@ -19,6 +19,7 @@ import type {
   ThoughtType,
   WorkspaceData,
 } from './types'
+import { t } from '../i18n/core'
 
 interface Seed {
   key: string
@@ -209,8 +210,8 @@ export function createExampleWorkspace(): WorkspaceData {
     return {
       id,
       workspaceId,
-      text: seed.text,
-      description: seed.description ?? '',
+      text: t(seed.text),
+      description: seed.description ? t(seed.description) : '',
       type: seed.type,
       dimensionValues,
       tags: [],
@@ -240,7 +241,7 @@ export function createExampleWorkspace(): WorkspaceData {
   return {
     workspace: {
       id: workspaceId,
-      name: 'Example workspace',
+      name: t('Example workspace'),
       createdAt: timestamp,
       updatedAt: timestamp,
       currentStage: 'matrix',
@@ -272,9 +273,9 @@ function exampleLearning(
   const observation: Observation = {
     id: createId('obs'),
     workspaceId,
-    description: 'After I left the house, I became more willing to move.',
+    description: t('After I left the house, I became more willing to move.'),
     occurredAt: timestamp,
-    context: { timeOfDay: 'Evening', tags: ['energy', 'movement'] },
+    context: { timeOfDay: t('Evening'), tags: [t('energy'), t('movement')] },
     energyBefore: 2,
     energyAfter: 4,
     relatedThoughtIds,
@@ -285,14 +286,14 @@ function exampleLearning(
   const evidence: Evidence = {
     id: createId('evd'),
     workspaceId,
-    statement: 'Changing environments may help me regain movement motivation.',
+    statement: t('Changing environments may help me regain movement motivation.'),
     observationIds: [observation.id],
     supportingObservationIds: [observation.id],
     contradictingObservationIds: [],
     relatedThoughtIds,
     confidence: 'low',
     status: 'emerging',
-    context: { tags: ['energy', 'movement'] },
+    context: { tags: [t('energy'), t('movement')] },
     createdAt: timestamp,
     updatedAt: timestamp,
   }
@@ -300,7 +301,7 @@ function exampleLearning(
   const previousBelief: Belief = {
     id: createId('blf'),
     workspaceId,
-    statement: 'I need to feel motivated before I start moving.',
+    statement: t('I need to feel motivated before I start moving.'),
     confidence: 'low',
     status: 'replaced',
     evidenceIds: [],
@@ -313,7 +314,7 @@ function exampleLearning(
   const updatedBelief: Belief = {
     id: createId('blf'),
     workspaceId,
-    statement: 'Movement motivation may appear after I change environments or begin moving.',
+    statement: t('Movement motivation may appear after I change environments or begin moving.'),
     confidence: 'low',
     status: 'active',
     evidenceIds: [evidence.id],
@@ -332,8 +333,9 @@ function exampleLearning(
       {
         id: createId('hyp'),
         workspaceId,
-        statement:
+        statement: t(
           'If I leave the house when my energy is low, I may become more willing to move.',
+        ),
         relatedValueIds: [],
         relatedGoalIds: healthId ? [healthId] : [],
         relatedThoughtIds: walkId ? [walkId] : [],
@@ -354,8 +356,9 @@ function exampleLearning(
         previousStatement: previousBelief.statement,
         updatedBeliefId: updatedBelief.id,
         updatedStatement: updatedBelief.statement,
-        reason:
+        reason: t(
           'One recorded experience went the other way round: the willingness followed the change of environment.',
+        ),
         supportingEvidenceIds: [evidence.id],
         contradictingEvidenceIds: [],
         confidence: 'low',
@@ -366,22 +369,22 @@ function exampleLearning(
       {
         id: createId('prule'),
         workspaceId,
-        name: 'Go outside before deciding about exercise',
-        triggerDescription:
-          'my energy is low and I have stayed indoors for a long time',
+        name: t('Go outside before deciding about exercise'),
+        triggerDescription: t('my energy is low and I have stayed indoors for a long time'),
         conditions: [
-          { id: createId('pcond'), description: 'Energy feels like 3 or lower.' },
-          { id: createId('pcond'), description: 'Indoors for most of the day.' },
+          { id: createId('pcond'), description: t('Energy feels like 3 or lower.') },
+          { id: createId('pcond'), description: t('Indoors for most of the day.') },
         ],
-        defaultResponse:
+        defaultResponse: t(
           'Go outside for five minutes, then decide whether I want to exercise.',
-        exceptionDescription: 'Not when I am ill, or when the weather makes it unsafe.',
+        ),
+        exceptionDescription: t('Not when I am ill, or when the weather makes it unsafe.'),
         relatedValueIds: [],
         relatedGoalIds: healthId ? [healthId] : [],
         relatedThoughtIds: walkId ? [walkId] : [],
         evidenceIds: [evidence.id],
         contradictingEvidenceIds: [],
-        context: { tags: ['energy', 'movement'] },
+        context: { tags: [t('energy'), t('movement')] },
         confidence: 'veryLow',
         status: 'experimental',
         createdAt: timestamp,

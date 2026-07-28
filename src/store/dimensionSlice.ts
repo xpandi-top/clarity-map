@@ -1,6 +1,7 @@
 import { createId } from '../domain/ids'
 import type { Dimension } from '../domain/types'
 import type { DimensionActions, SliceCreator, StoreState } from './types'
+import { tx } from '../i18n/core'
 
 function withDimensions(
   state: StoreState,
@@ -53,7 +54,7 @@ export const createDimensionSlice: SliceCreator<DimensionActions> = (set, get) =
           {
             ...source,
             id: createId('dim'),
-            name: `${source.name} (copy)`,
+            name: tx('{name} (copy)', '{name}（副本）', { name: source.name }),
             builtIn: false,
             options: source.options?.map((option) => ({ ...option, id: createId('opt') })),
           },

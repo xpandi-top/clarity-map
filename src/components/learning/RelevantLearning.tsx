@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { LearningReminder } from '../../domain/relevance'
 import { useObservations, useRelevantLearning } from '../../store'
+import { formatDate } from '../../i18n/core'
 
 const KIND_LABEL: Record<LearningReminder['kind'], string> = {
   observation: 'You recorded',
@@ -67,7 +68,7 @@ export function RelevantLearning({
                       <li key={observationId}>
                         {observation.description}{' '}
                         <span className="faint">
-                          {new Date(observation.occurredAt).toLocaleDateString()}
+                          {formatDate(observation.occurredAt)}
                         </span>
                       </li>
                     )

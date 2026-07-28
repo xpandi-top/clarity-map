@@ -5,6 +5,7 @@ import { RecordPicker } from './RecordPicker'
 import { ThoughtLinkPicker } from './ThoughtLinkPicker'
 import type { ConfidenceLevel } from '../../domain/types'
 import { useBeliefs, useEvidence, useStore } from '../../store'
+import { tx } from '../../i18n/core'
 
 interface BeliefUpdateDialogProps {
   /** The belief being revised. Leave empty to record a first working model. */
@@ -47,7 +48,15 @@ export function BeliefUpdateDialog({
       evidence.map((entry) => ({
         id: entry.id,
         label: entry.statement,
-        meta: `${entry.supportingObservationIds.length || entry.observationIds.length} observation(s)`,
+        meta: (() => {
+          const count =
+            entry.supportingObservationIds.length || entry.observationIds.length
+          return tx(
+            count === 1 ? '{count} observation' : '{count} observations',
+            '{count} 条观察',
+            { count },
+          )
+        })(),
       })),
     [evidence],
   )

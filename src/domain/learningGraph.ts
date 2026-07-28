@@ -1,4 +1,5 @@
 import type { LearningData, Thought } from './types'
+import { formatDate } from '../i18n/core'
 
 /**
  * How records relate to each other epistemically. Separate from
@@ -112,7 +113,7 @@ function allNodes(data: LearningData, thoughts: Thought[]): Map<string, Learning
       id: observation.id,
       kind: 'observation',
       label: clip(observation.title || observation.description),
-      meta: new Date(observation.occurredAt).toLocaleDateString(),
+      meta: formatDate(observation.occurredAt),
     })
   }
   for (const evidence of data.evidence) {

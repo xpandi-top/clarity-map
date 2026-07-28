@@ -8,6 +8,7 @@ import type {
   RuleSuggestion,
   Thought,
 } from './types'
+import { t, tx } from '../i18n/core'
 
 function fieldValue(
   thought: Thought,
@@ -101,19 +102,23 @@ export function ruleMatches(thought: Thought, rule: Rule, dimensions: Dimension[
 export function suggestionMessage(action: RuleAction): string {
   switch (action.type) {
     case 'addTag':
-      return `Add the tag “${action.value}”.`
+      return tx('Add the tag “{value}”.', '添加标签“{value}”。', { value: action.value })
     case 'removeTag':
-      return `Remove the tag “${action.value}”.`
+      return tx('Remove the tag “{value}”.', '移除标签“{value}”。', { value: action.value })
     case 'suggestType':
-      return `This may be a ${THOUGHT_TYPE_LABEL[action.value]}. You can keep the current type.`
+      return tx(
+        'This may be a {type}. You can keep the current type.',
+        '这可能属于“{type}”。你也可以保留当前类型。',
+        { type: t(THOUGHT_TYPE_LABEL[action.value]) },
+      )
     case 'flag':
       return action.value
     case 'suggestBreakdown':
-      return 'This thought may need to be broken down.'
+      return t('This thought may need to be broken down.')
     case 'suggestArchive':
-      return 'You could archive this thought if it no longer needs attention.'
+      return t('You could archive this thought if it no longer needs attention.')
     default:
-      return 'Suggestion'
+      return t('Suggestion')
   }
 }
 

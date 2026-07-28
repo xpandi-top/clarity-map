@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ThoughtDetailPanel } from '../thoughts/ThoughtDetailPanel'
 import { Toast } from './Toast'
 import { useCurrentWorkspace } from '../../store'
+import { LanguageSwitcher } from '../../i18n/LanguageSwitcher'
+import { t } from '../../i18n/core'
 
 /**
  * The workflow in order: write it down, work out what each thought is and how
@@ -96,8 +98,8 @@ export function AppLayout() {
       )?.label ?? 'Clarity Map'
     document.title =
       routeName === 'Clarity Map'
-        ? routeName
-        : `${routeName}${workspace ? ` · ${workspace.name}` : ''} · Clarity Map`
+        ? t(routeName)
+        : `${t(routeName)}${workspace ? ` · ${workspace.name}` : ''} · ${t('Clarity Map')}`
   }, [pathname, workspace])
 
   return (
@@ -133,8 +135,11 @@ export function AppLayout() {
                   {entry.label}
                 </NavLink>
               ))}
+              <LanguageSwitcher />
             </nav>
-          ) : null}
+          ) : (
+            <LanguageSwitcher />
+          )}
         </div>
 
         {workspace ? (

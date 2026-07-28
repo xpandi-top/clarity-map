@@ -1,4 +1,5 @@
 import type { Dimension } from './types'
+import { tx } from '../i18n/core'
 
 /**
  * A dimension is asked about in two different situations, and one wording
@@ -14,7 +15,11 @@ import type { Dimension } from './types'
 export function comparativePrompt(dimension: Dimension): string {
   const authored = dimension.comparativeQuestion?.trim()
   if (authored) return authored
-  return `Which one would you put higher on ${dimension.name.toLowerCase()}?`
+  return tx(
+    'Which one would you put higher on {name}?',
+    '按“{name}”比较，哪一个应该排得更高？',
+    { name: dimension.name.toLowerCase() },
+  )
 }
 
 /** True when the wording was written for this dimension rather than generated. */
@@ -29,7 +34,11 @@ export function hasAuthoredComparison(dimension: Dimension): boolean {
 export function suggestComparativeQuestion(name: string): string {
   const trimmed = name.trim()
   if (!trimmed) return ''
-  return `Which one would you put higher on ${trimmed.toLowerCase()}?`
+  return tx(
+    'Which one would you put higher on {name}?',
+    '按“{name}”比较，哪一个应该排得更高？',
+    { name: trimmed.toLowerCase() },
+  )
 }
 
 /**

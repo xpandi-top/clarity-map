@@ -18,6 +18,7 @@ import {
   useThought,
   useThoughts,
 } from '../../store'
+import { formatDateTime, tx } from '../../i18n/core'
 
 /** Side panel for reading and editing a single thought. */
 export function ThoughtDetailPanel() {
@@ -248,7 +249,7 @@ function ThoughtDetail({ thought, inline = false }: { thought: Thought; inline?:
                   <button
                     type="button"
                     className="button button--quiet button--small"
-                    aria-label={`Remove tag ${tag}`}
+                    aria-label={tx('Remove tag {tag}', '移除标签“{tag}”', { tag })}
                     onClick={() => removeTag(thought.id, tag)}
                   >
                     ×
@@ -390,8 +391,8 @@ function ThoughtDetail({ thought, inline = false }: { thought: Thought; inline?:
           </div>
 
           <p className="faint">
-            Created {new Date(thought.createdAt).toLocaleString()} · Updated{' '}
-            {new Date(thought.updatedAt).toLocaleString()}
+            Created {formatDateTime(thought.createdAt)} · Updated{' '}
+            {formatDateTime(thought.updatedAt)}
           </p>
         </div>
       </ThoughtDetailFrame>

@@ -5,6 +5,7 @@ import { createId } from '../../domain/ids'
 import { suggestComparativeQuestion } from '../../domain/prompts'
 import type { Dimension, DimensionKind, DimensionStage } from '../../domain/types'
 import { useDimensions, useStore } from '../../store'
+import { t } from '../../i18n/core'
 
 const KINDS: DimensionKind[] = ['binary', 'scale', 'singleSelect', 'multiSelect', 'boolean']
 const STAGES: DimensionStage[] = ['capture', 'review', 'structure', 'action', 'optional']
@@ -113,7 +114,7 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
           <input
             id={`name-${dimension.id}`}
             className="input"
-            value={dimension.name}
+            value={dimension.builtIn ? t(dimension.name) : dimension.name}
             onChange={(event) => patch({ name: event.target.value })}
           />
         </div>
@@ -140,7 +141,7 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
         <input
           id={`question-${dimension.id}`}
           className="input"
-          value={dimension.question}
+          value={dimension.builtIn ? t(dimension.question) : dimension.question}
           onChange={(event) => patch({ question: event.target.value })}
         />
         <span className="faint">Asked in the review screens and the detail panel.</span>
@@ -151,7 +152,11 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
         <input
           id={`compare-question-${dimension.id}`}
           className="input"
-          value={dimension.comparativeQuestion ?? ''}
+          value={
+            dimension.builtIn
+              ? t(dimension.comparativeQuestion ?? '')
+              : (dimension.comparativeQuestion ?? '')
+          }
           placeholder={suggestComparativeQuestion(dimension.name)}
           onChange={(event) => patch({ comparativeQuestion: event.target.value })}
         />
@@ -166,7 +171,9 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
         <input
           id={`helper-${dimension.id}`}
           className="input"
-          value={dimension.description ?? ''}
+          value={
+            dimension.builtIn ? t(dimension.description ?? '') : (dimension.description ?? '')
+          }
           onChange={(event) => patch({ description: event.target.value })}
         />
       </div>
@@ -246,7 +253,7 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
             <input
               id={`low-${dimension.id}`}
               className="input"
-              value={dimension.lowLabel ?? ''}
+              value={dimension.builtIn ? t(dimension.lowLabel ?? '') : (dimension.lowLabel ?? '')}
               onChange={(event) => patch({ lowLabel: event.target.value })}
             />
           </div>
@@ -255,7 +262,9 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
             <input
               id={`high-${dimension.id}`}
               className="input"
-              value={dimension.highLabel ?? ''}
+              value={
+                dimension.builtIn ? t(dimension.highLabel ?? '') : (dimension.highLabel ?? '')
+              }
               onChange={(event) => patch({ highLabel: event.target.value })}
             />
           </div>
@@ -273,7 +282,7 @@ function DimensionEditor({ dimension }: { dimension: Dimension }) {
               <input
                 id={`option-${option.id}`}
                 className="input"
-                value={option.label}
+                value={dimension.builtIn ? t(option.label) : option.label}
                 onChange={(event) =>
                   patch({
                     options: options.map((entry) =>

@@ -6,6 +6,7 @@ import {
   findChoice,
 } from '../../domain/relationChoices'
 import { useStore, useVisibleThoughts } from '../../store'
+import { t, tx } from '../../i18n/core'
 
 /**
  * One-line "this thought serves / is served by that one" control. Both
@@ -38,7 +39,10 @@ export function QuickRelation({ sourceThoughtId }: { sourceThoughtId: string }) 
     const result = addRelation(from, choice.type, to)
     showToast(
       result.ok
-        ? (result.warning ?? `Linked: ${choice.label}.`)
+        ? (result.warning ??
+          tx('Linked: {relation}.', '已连接：{relation}。', {
+            relation: t(choice.label),
+          }))
         : (result.reason ?? 'That relationship could not be added.'),
     )
   }

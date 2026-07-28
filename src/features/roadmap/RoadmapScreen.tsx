@@ -17,6 +17,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { buildLearningGraph } from '../../domain/learningGraph'
 import { LearningGraphView } from '../../components/learning/LearningGraphView'
 import { useLearningData, useRelations, useStore, useThought, useThoughts } from '../../store'
+import { t, tx } from '../../i18n/core'
 
 type Direction = 'both' | 'up' | 'down'
 
@@ -266,7 +267,11 @@ export function RoadmapScreen() {
       {deeperThanShown > 0 ? (
         <p className="notice" role="status">
           {deeperThanShown === 1
-            ? `1 thought sits deeper than ${depth} level${depth === 1 ? '' : 's'} and is hidden.`
+            ? tx(
+                '1 thought sits deeper than {depth} level(s) and is hidden.',
+                '有 1 条想法位于第 {depth} 层之后，现已隐藏。',
+                { depth },
+              )
             : `${deeperThanShown} thoughts sit deeper than ${depth} level${
                 depth === 1 ? '' : 's'
               } and are hidden.`}{' '}
@@ -321,7 +326,10 @@ export function RoadmapScreen() {
             const result = addRelation(sourceThoughtId, connectType, targetThoughtId)
             showToast(
               result.ok
-                ? (result.warning ?? `Added: ${RELATION_REVERSE_LABEL[connectType]}.`)
+                ? (result.warning ??
+                  tx('Added: {relation}.', '已添加：{relation}。', {
+                    relation: t(RELATION_REVERSE_LABEL[connectType]),
+                  }))
                 : (result.reason ?? 'That relationship could not be added.'),
             )
           }}
@@ -331,7 +339,9 @@ export function RoadmapScreen() {
             showToast(
               relationIds.length === 1
                 ? 'Relationship removed.'
-                : `${relationIds.length} relationships removed.`,
+                : tx('{count} relationships removed.', '已移除 {count} 条关系。', {
+                    count: relationIds.length,
+                  }),
             )
           }}
         />

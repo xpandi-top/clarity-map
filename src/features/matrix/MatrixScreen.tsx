@@ -28,6 +28,7 @@ import { ORDER_LABEL, hasComparisonData, orderThoughts, type ThoughtOrder } from
 import { allTags, filterThoughts } from '../../domain/selectors'
 import type { Thought, ThoughtStatus, ThoughtType } from '../../domain/types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { t, tx } from '../../i18n/core'
 import {
   useActiveDimensions,
   useComparisons,
@@ -145,7 +146,11 @@ export function MatrixScreen() {
     showToast(
       bothAxesLocked
         ? 'Both axes come from your comparisons. Change a position in Compare.'
-        : `${lockedAxes[0].name} comes from your comparisons and cannot be dragged. The other axis was updated.`,
+        : tx(
+            '{name} comes from your comparisons and cannot be dragged. The other axis was updated.',
+            '“{name}”来自比较结果，不能拖动。另一个坐标轴已更新。',
+            { name: t(lockedAxes[0].name) },
+          ),
     )
   }
 
@@ -170,7 +175,12 @@ export function MatrixScreen() {
       setDimensionValue(thoughtId, yDimension.id, valueForHalf(yDimension, yHigh))
     }
     if (lockedAxes.length > 0) reportLocked()
-    else showToast(`Moved to ${quadrantTitle(quadrant, xDimension, yDimension)}.`)
+    else
+      showToast(
+        tx('Moved to {quadrant}.', '已移到“{quadrant}”。', {
+          quadrant: t(quadrantTitle(quadrant, xDimension, yDimension)),
+        }),
+      )
   }
 
   if (!xDimension || !yDimension) {
@@ -463,7 +473,11 @@ export function MatrixScreen() {
 
       {creatingFor ? (
         <DimensionCreateDialog
-          intro={`This becomes the ${creatingFor === 'x' ? 'horizontal' : 'vertical'} axis as soon as it is created. Two-choice dimensions draw quadrants; scales draw a scatter.`}
+          intro={tx(
+            'This becomes the {axis} axis as soon as it is created. Two-choice dimensions draw quadrants; scales draw a scatter.',
+            '创建后会立即成为{axis}。二选一维度显示象限，量表维度显示散点图。',
+            { axis: creatingFor === 'x' ? '横轴' : '纵轴' },
+          )}
           onClose={() => setCreatingFor(null)}
           onCreated={(dimensionId) =>
             setMatrixAxes(

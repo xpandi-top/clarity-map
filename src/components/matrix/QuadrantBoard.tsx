@@ -7,6 +7,7 @@ import {
 } from '../../domain/defaults'
 import { QUADRANTS, highLabel, lowLabel, quadrantTitle, type QuadrantId } from '../../domain/matrix'
 import type { Dimension, Thought } from '../../domain/types'
+import { t, tx } from '../../i18n/core'
 
 interface QuadrantBoardProps {
   /** Thoughts already ordered, grouped by quadrant. */
@@ -28,7 +29,7 @@ function halves(quadrant: QuadrantId, xDimension: Dimension, yDimension: Dimensi
   const y = quadrant === 'highHigh' || quadrant === 'lowHigh'
     ? highLabel(yDimension)
     : lowLabel(yDimension)
-  return `${x} · ${y}`
+  return `${t(x)} · ${t(y)}`
 }
 
 /**
@@ -117,7 +118,11 @@ export function QuadrantBoard({
                         role="button"
                         tabIndex={0}
                         draggable
-                        aria-label={`${thought.text}. Open details.`}
+                        aria-label={tx(
+                          '{thought}. Open details.',
+                          '{thought}。打开详情。',
+                          { thought: thought.text },
+                        )}
                         className={`quadrant-card${motivationClass}${
                           selectedThoughtId === thought.id ? ' is-selected' : ''
                         }${dragging === thought.id ? ' is-dragging' : ''}`}

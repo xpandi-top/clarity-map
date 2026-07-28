@@ -9,6 +9,7 @@ import type {
   ThoughtType,
 } from '../../domain/types'
 import { useDimensions, useRules, useStore, useSuggestions, useThoughts } from '../../store'
+import { t } from '../../i18n/core'
 
 const OPERATORS: RuleOperator[] = [
   'equals',
@@ -164,7 +165,7 @@ function RuleEditor({ rule }: { rule: Rule }) {
           <input
             id={`rule-name-${rule.id}`}
             className="input"
-            value={rule.name}
+            value={rule.builtIn ? t(rule.name) : rule.name}
             onChange={(event) => patch({ name: event.target.value })}
           />
         </div>
@@ -348,7 +349,7 @@ function RuleEditor({ rule }: { rule: Rule }) {
                   id={`action-value-${rule.id}-${index}`}
                   className="select"
                   style={{ maxWidth: '11rem' }}
-                  value={action.value}
+                  value={rule.builtIn ? t(action.value) : action.value}
                   onChange={(event) =>
                     patchAction(index, {
                       type: 'suggestType',

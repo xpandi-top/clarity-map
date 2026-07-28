@@ -19,6 +19,7 @@ import {
   useStore,
   useThoughts,
 } from '../../store'
+import { formatDateTime, tx } from '../../i18n/core'
 
 const UNRESOLVED_TAG = 'unresolved'
 
@@ -120,7 +121,7 @@ export function EvidenceInboxScreen() {
           <li key={observation.id} className="settings-item">
             <p style={{ margin: 0 }}>{observation.description}</p>
             <p className="faint" style={{ margin: 0 }}>
-              {new Date(observation.occurredAt).toLocaleString()}
+              {formatDateTime(observation.occurredAt)}
               {observation.context.tags.length > 0
                 ? ` · ${observation.context.tags.join(', ')}`
                 : ''}
@@ -216,9 +217,15 @@ export function EvidenceInboxScreen() {
 
       {beliefs.length === 0 && hypotheses.length === 0 ? null : (
         <p className="faint">
-          {beliefs.length} belief{beliefs.length === 1 ? '' : 's'} · {hypotheses.length} hypothes
-          {hypotheses.length === 1 ? 'is' : 'es'} · {archivedCount} archived observation
-          {archivedCount === 1 ? '' : 's'}
+          {tx(
+            `{beliefs} ${beliefs.length === 1 ? 'belief' : 'beliefs'} · {hypotheses} ${
+              hypotheses.length === 1 ? 'hypothesis' : 'hypotheses'
+            } · {archived} archived ${
+              archivedCount === 1 ? 'observation' : 'observations'
+            }`,
+            '{beliefs} 条认知 · {hypotheses} 个假设 · {archived} 条已归档观察',
+            { beliefs: beliefs.length, hypotheses: hypotheses.length, archived: archivedCount },
+          )}
         </p>
       )}
 
@@ -340,7 +347,7 @@ function ObservationRow({
     <li className="settings-item stack">
       <p style={{ margin: 0 }}>{observation.description}</p>
       <p className="faint" style={{ margin: 0 }}>
-        {new Date(observation.occurredAt).toLocaleString()}
+        {formatDateTime(observation.occurredAt)}
         {thoughtLabels.length > 0 ? ` · ${thoughtLabels.join(', ')}` : ''}
         {observation.context.tags.length > 0
           ? ` · ${observation.context.tags.join(', ')}`

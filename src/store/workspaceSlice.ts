@@ -11,6 +11,7 @@ import { reassignIds } from '../domain/importExport'
 import type { WorkspaceData } from '../domain/types'
 import { createInitialDataState } from './initialState'
 import type { SliceCreator, StoreState, WorkspaceActions } from './types'
+import { tx } from '../i18n/core'
 
 /** Adds a fully-formed workspace to the store and makes it current. */
 export function ingestWorkspace(state: StoreState, entry: WorkspaceData): Partial<StoreState> {
@@ -85,7 +86,12 @@ export const createWorkspaceSlice: SliceCreator<WorkspaceActions> = (set, get) =
     const source = state.workspaces.find((workspace) => workspace.id === workspaceId)
     if (!source) return null
     const copy = reassignIds({
-      workspace: { ...source, name: `${source.name} (copy)`, createdAt: nowIso(), updatedAt: nowIso() },
+      workspace: {
+        ...source,
+        name: tx('{name} (copy)', '{name}（副本）', { name: source.name }),
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      },
       thoughts: state.thoughts.filter((thought) => thought.workspaceId === workspaceId),
       dimensions: state.dimensionsByWorkspace[workspaceId] ?? createDefaultDimensions(),
       relations: state.relations.filter((relation) => relation.workspaceId === workspaceId),

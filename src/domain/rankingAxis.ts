@@ -1,5 +1,6 @@
 import { scoreComparisons } from './comparisons'
 import type { Dimension, DimensionValue, PairwiseComparison, Thought } from './types'
+import { t, tx } from '../i18n/core'
 
 /** Ranking axes are synthetic dimensions, keyed off the one they rank. */
 export const RANK_AXIS_PREFIX = 'rank:'
@@ -20,15 +21,19 @@ export function rankedDimensionId(axisId: string): string {
 export function createRankAxis(source: Dimension): Dimension {
   return {
     id: `${RANK_AXIS_PREFIX}${source.id}`,
-    name: `${source.name} (ranking)`,
-    question: `Where does this sit when compared on ${source.name.toLowerCase()}?`,
-    description: 'Comes from the comparisons you have made, not from an answer you typed.',
+    name: tx('{name} (ranking)', '{name}（排名）', { name: t(source.name) }),
+    question: tx(
+      'Where does this sit when compared on {name}?',
+      '按“{name}”比较时，它排在哪里？',
+      { name: t(source.name) },
+    ),
+    description: t('Comes from the comparisons you have made, not from an answer you typed.'),
     kind: 'scale',
     min: 0,
     max: 100,
     step: 1,
-    lowLabel: 'Ranked lower',
-    highLabel: 'Ranked higher',
+    lowLabel: t('Ranked lower'),
+    highLabel: t('Ranked higher'),
     required: false,
     active: true,
     builtIn: false,

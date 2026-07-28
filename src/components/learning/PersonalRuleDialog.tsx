@@ -11,6 +11,7 @@ import type {
   PersonalRuleStatus,
 } from '../../domain/types'
 import { useEvidence, useStore } from '../../store'
+import { tx } from '../../i18n/core'
 
 interface PersonalRuleDialogProps {
   /** Editing an existing rule, or writing a replacement for one. */
@@ -174,7 +175,7 @@ export function PersonalRuleDialog({
               <input
                 className="input"
                 value={condition}
-                aria-label={`Condition ${index + 1}`}
+                aria-label={tx('Condition {number}', '条件 {number}', { number: index + 1 })}
                 onChange={(event) =>
                   setConditions((current) =>
                     current.map((entry, position) =>
@@ -186,7 +187,9 @@ export function PersonalRuleDialog({
               <button
                 type="button"
                 className="button button--quiet button--small"
-                aria-label={`Remove condition ${index + 1}`}
+                aria-label={tx('Remove condition {number}', '移除条件 {number}', {
+                  number: index + 1,
+                })}
                 onClick={() =>
                   setConditions((current) => current.filter((_, position) => position !== index))
                 }

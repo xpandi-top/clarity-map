@@ -1,6 +1,7 @@
 import { THOUGHT_TYPE_LABEL } from './defaults'
 import { hierarchy } from './graph'
 import type { Thought, ThoughtRelation } from './types'
+import { t, tx } from '../i18n/core'
 
 export interface ChecklistOptions {
   /** Leave out anything that is not an action or a habit. */
@@ -90,7 +91,7 @@ export function buildChecklistMarkdown(
   const lines: string[] = [`# ${escapeMarkdown(root.thought.text)}`, '']
 
   if (includeTypes && root.thought.type !== 'unclassified') {
-    lines.push(`_${THOUGHT_TYPE_LABEL[root.thought.type]}_`, '')
+    lines.push(`_${t(THOUGHT_TYPE_LABEL[root.thought.type])}_`, '')
   }
   if (root.thought.description.trim()) {
     lines.push(escapeMarkdown(root.thought.description), '')
@@ -108,7 +109,7 @@ export function buildChecklistMarkdown(
       const box = item.done ? '[x]' : '[ ]'
       const suffix: string[] = []
       if (includeTypes && item.thought.type !== 'unclassified') {
-        suffix.push(THOUGHT_TYPE_LABEL[item.thought.type])
+        suffix.push(t(THOUGHT_TYPE_LABEL[item.thought.type]))
       }
       if (includeStatus && item.thought.status !== 'active') suffix.push(item.thought.status)
       const trailer = suffix.length > 0 ? ` _(${suffix.join(', ')})_` : ''
@@ -117,7 +118,12 @@ export function buildChecklistMarkdown(
   }
 
   if (generatedAt) {
-    lines.push('', `_Exported from Clarity Map on ${generatedAt}._`)
+    lines.push(
+      '',
+      `_${tx('Exported from Clarity Map on {date}.', '由清晰地图导出于 {date}。', {
+        date: generatedAt,
+      })}_`,
+    )
   }
 
   return `${lines.join('\n')}\n`

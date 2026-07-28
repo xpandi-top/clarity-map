@@ -8,6 +8,7 @@ import type {
   PersonalDefaultRule,
   Thought,
 } from './types'
+import { formatDate, t, tx } from '../i18n/core'
 
 export type ReminderKind = 'observation' | 'evidence' | 'belief' | 'hypothesis' | 'rule'
 
@@ -30,6 +31,7 @@ export interface LearningReminder {
 }
 
 function countPhrase(count: number, singular: string, plural: string): string {
+  if (t('Observation') === '观察') return `${count} 条观察`
   const words = ['no', 'one', 'two', 'three', 'four', 'five']
   const number = count < words.length ? words[count] : String(count)
   return `${number} ${count === 1 ? singular : plural}`
@@ -43,14 +45,19 @@ function trimStatement(statement: string): string {
 function observationReminder(observation: Observation, via: 'link' | 'tag'): LearningReminder {
   const change =
     observation.energyBefore !== undefined && observation.energyAfter !== undefined
-      ? `Energy ${observation.energyBefore} → ${observation.energyAfter}.`
+      ? tx('Energy {before} → {after}.', '精力 {before} → {after}。', {
+          before: observation.energyBefore,
+          after: observation.energyAfter,
+        })
       : undefined
   return {
     id: `obs:${observation.id}`,
     kind: 'observation',
     entityId: observation.id,
-    message: `You previously recorded: ${trimStatement(observation.description)}.`,
-    detail: [new Date(observation.occurredAt).toLocaleDateString(), change]
+    message: tx('You previously recorded: {text}.', '你之前记录过：{text}。', {
+      text: trimStatement(observation.description),
+    }),
+    detail: [formatDate(observation.occurredAt), change]
       .filter(Boolean)
       .join(' · '),
     sourceObservationIds: [observation.id],
@@ -67,14 +74,18 @@ function evidenceReminder(evidence: Evidence, via: 'link' | 'tag'): LearningRemi
     entityId: evidence.id,
     message:
       supporting > 0
-        ? `You have ${countPhrase(supporting, 'observation', 'observations')} suggesting that ${
-            trimStatement(evidence.statement).charAt(0).toLowerCase() +
-            trimStatement(evidence.statement).slice(1)
-          }.`
+        ? tx('You have {count} suggesting that {text}.', '你有{count}表明：{text}。', {
+            count: countPhrase(supporting, 'observation', 'observations'),
+            text:
+              trimStatement(evidence.statement).charAt(0).toLowerCase() +
+              trimStatement(evidence.statement).slice(1),
+          })
         : `${trimStatement(evidence.statement)}.`,
     caution:
       contradicting > 0
-        ? `${countPhrase(contradicting, 'observation points', 'observations point')} the other way.`
+        ? tx('{count} the other way.', '{count}指向相反结论。', {
+            count: countPhrase(contradicting, 'observation points', 'observations point'),
+          })
         : undefined,
     sourceObservationIds: [
       ...new Set([
@@ -92,7 +103,9 @@ function beliefReminder(belief: Belief, via: 'link' | 'tag'): LearningReminder {
     id: `blf:${belief.id}`,
     kind: 'belief',
     entityId: belief.id,
-    message: `Your current working model: ${trimStatement(belief.statement)}.`,
+    message: tx('Your current working model: {text}.', '你目前的认知：{text}。', {
+      text: trimStatement(belief.statement),
+    }),
     detail: belief.description,
     caution: hasMixedSupport(belief)
       ? 'This belief currently has mixed evidence.'
@@ -109,7 +122,9 @@ function hypothesisReminder(hypothesis: Hypothesis, via: 'link' | 'tag'): Learni
     id: `hyp:${hypothesis.id}`,
     kind: 'hypothesis',
     entityId: hypothesis.id,
-    message: `You are testing: ${trimStatement(hypothesis.statement)}.`,
+    message: tx('You are testing: {text}.', '你正在检验：{text}。', {
+      text: trimStatement(hypothesis.statement),
+    }),
     sourceObservationIds: [],
     via,
   }
@@ -121,10 +136,13 @@ function ruleReminder(rule: PersonalDefaultRule, via: 'link' | 'tag'): LearningR
     id: `prule:${rule.id}`,
     kind: 'rule',
     entityId: rule.id,
-    message: `Your default when ${trimStatement(rule.triggerDescription)}: ${trimStatement(
-      rule.defaultResponse,
-    )}.`,
-    detail: rule.exceptionDescription ? `Exception: ${rule.exceptionDescription}` : undefined,
+    message: tx('Your default when {trigger}: {response}.', '当{trigger}时，你的默认做法是：{response}。', {
+      trigger: trimStatement(rule.triggerDescription),
+      response: trimStatement(rule.defaultResponse),
+    }),
+    detail: rule.exceptionDescription
+      ? tx('Exception: {text}', '例外：{text}', { text: rule.exceptionDescription })
+      : undefined,
     caution: review.due ? (review.reason ?? MIXED_EVIDENCE_NOTICE) : undefined,
     sourceObservationIds: [],
     via,

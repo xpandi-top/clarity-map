@@ -33,6 +33,7 @@ import {
   useStore,
   useThoughts,
 } from '../../store'
+import { formatDate, formatDateTime, tx } from '../../i18n/core'
 
 type GraphMode = 'learning' | 'combined'
 
@@ -97,9 +98,12 @@ export function ModelScreen() {
   const focusOptions = [
     ...beliefs.map((belief) => ({
       id: belief.id,
-      label: `Belief — ${belief.statement}`,
+      label: tx('Belief — {text}', '认知——{text}', { text: belief.statement }),
     })),
-    ...personalRules.map((rule) => ({ id: rule.id, label: `Rule — ${rule.name}` })),
+    ...personalRules.map((rule) => ({
+      id: rule.id,
+      label: tx('Rule — {text}', '默认做法——{text}', { text: rule.name }),
+    })),
   ]
 
   return (
@@ -162,7 +166,7 @@ export function ModelScreen() {
               return (
                 <li key={update.id} className="model-step stack">
                   <p className="faint" style={{ margin: 0 }}>
-                    {new Date(update.createdAt).toLocaleString()}
+                    {formatDateTime(update.createdAt)}
                   </p>
 
                   {update.previousStatement ? (
@@ -229,7 +233,7 @@ export function ModelScreen() {
                     ) : null}
                     {update.reviewAt ? (
                       <span className="chip">
-                        Review {new Date(update.reviewAt).toLocaleDateString()}
+                        Review {formatDate(update.reviewAt)}
                       </span>
                     ) : null}
                   </div>
@@ -406,7 +410,7 @@ export function ModelScreen() {
                     </span>
                     {rule.lastUsedAt ? (
                       <span className="chip">
-                        Last used {new Date(rule.lastUsedAt).toLocaleDateString()}
+                        Last used {formatDate(rule.lastUsedAt)}
                       </span>
                     ) : null}
                   </div>

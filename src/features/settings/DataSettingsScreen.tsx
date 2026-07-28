@@ -9,6 +9,7 @@ import {
 import { validateImport } from '../../domain/validation'
 import type { ExportEnvelope } from '../../domain/types'
 import { useCurrentWorkspace, useStore } from '../../store'
+import { formatDate, tx } from '../../i18n/core'
 
 function download(filename: string, contents: string) {
   const blob = new Blob([contents], { type: 'application/json' })
@@ -67,7 +68,13 @@ export function DataSettingsScreen() {
     if (!pending) return
     const count = importEnvelope(pending.envelope, mode)
     setPending(null)
-    showToast(`Imported ${count} workspace${count === 1 ? '' : 's'}.`)
+    showToast(
+      tx(
+        count === 1 ? 'Imported {count} workspace.' : 'Imported {count} workspaces.',
+        '已导入 {count} 个工作区。',
+        { count },
+      ),
+    )
   }
 
   return (
@@ -144,7 +151,7 @@ export function DataSettingsScreen() {
                 {entry.name}
                 <span className="faint">
                   {' '}
-                  · created {new Date(entry.createdAt).toLocaleDateString()}
+                  · created {formatDate(entry.createdAt)}
                 </span>
               </span>
               <ConfirmButton

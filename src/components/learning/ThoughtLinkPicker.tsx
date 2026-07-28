@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import { THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import { useVisibleThoughts } from '../../store'
+import { tx } from '../../i18n/core'
 
 interface ThoughtLinkPickerProps {
   label: string
@@ -60,7 +61,9 @@ export function ThoughtLinkPicker({
               <button
                 type="button"
                 className="button button--quiet button--small"
-                aria-label={`Remove link to ${thought.text}`}
+                aria-label={tx('Remove link to {thought}', '移除与“{thought}”的关联', {
+                  thought: thought.text,
+                })}
                 onClick={() => toggle(thought.id)}
               >
                 ×

@@ -10,6 +10,10 @@ body,
   min-height: 100%;
 }
 
+.locale-root {
+  min-height: 100vh;
+}
+
 body {
   margin: 0;
   background: var(--surface);
@@ -62,6 +66,33 @@ textarea,
 select {
   font: inherit;
   color: inherit;
+}
+
+.language-switcher {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.language-switcher button {
+  min-width: 2.5rem;
+  min-height: 1.75rem;
+  padding: 0.15rem 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.language-switcher button[aria-pressed='true'] {
+  background: var(--surface-raised);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
+  font-weight: 650;
 }
 
 ::selection {

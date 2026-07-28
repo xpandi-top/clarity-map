@@ -10,6 +10,7 @@ import {
 } from '../../domain/defaults'
 import type { Thought } from '../../domain/types'
 import { useStore, useVisibleThoughts } from '../../store'
+import { tx } from '../../i18n/core'
 
 type MotivationFilter = 'all' | 'want' | 'should' | 'unanswered'
 
@@ -117,8 +118,20 @@ export function CaptureScreen() {
         </div>
         <div className="capture-page__meta">
           <p className="muted" style={{ margin: 0 }} role="status" aria-live="polite">
-            {thoughts.length} thought{thoughts.length === 1 ? '' : 's'} captured
-            {unresolved > 0 ? ` · ${unresolved} without a Want or Should answer` : null}
+            {tx(
+              thoughts.length === 1
+                ? '{count} thought captured'
+                : '{count} thoughts captured',
+              '已记录 {count} 条想法',
+              { count: thoughts.length },
+            )}
+            {unresolved > 0
+              ? tx(
+                  ' · {count} without a Want or Should answer',
+                  ' · {count} 条尚未回答“想做/该做”',
+                  { count: unresolved },
+                )
+              : null}
           </p>
           <div className="row">
             {lastDeletion ? (
@@ -286,7 +299,11 @@ function CaptureEntry({ thought, focused = false }: { thought: Thought; focused?
 
       <div
         role="group"
-        aria-label={`Does “${thought.text}” feel like something you want to do, or something you believe you should do?`}
+        aria-label={tx(
+          'Does “{thought}” feel like something you want to do, or something you believe you should do?',
+          '“{thought}”是你想做的，还是认为自己该做的？',
+          { thought: thought.text },
+        )}
         className="row"
         onKeyDown={(event) => {
           const key = event.key.toLowerCase()

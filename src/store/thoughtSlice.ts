@@ -2,6 +2,7 @@ import { BUILTIN_DIMENSION } from '../domain/defaults'
 import { createId, nowIso } from '../domain/ids'
 import type { Thought } from '../domain/types'
 import type { SliceCreator, StoreState, ThoughtActions } from './types'
+import { tx } from '../i18n/core'
 
 function replaceThought(
   state: StoreState,
@@ -86,7 +87,7 @@ export const createThoughtSlice: SliceCreator<ThoughtActions> = (set, get) => ({
     const copy: Thought = {
       ...source,
       id: createId('th'),
-      text: `${source.text} (copy)`,
+      text: tx('{text} (copy)', '{text}（副本）', { text: source.text }),
       dimensionValues: { ...source.dimensionValues },
       tags: [...source.tags],
       createdAt: timestamp,

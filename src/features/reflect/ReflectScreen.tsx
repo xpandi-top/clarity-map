@@ -13,6 +13,7 @@ import {
   usePersonalRules,
   useStore,
 } from '../../store'
+import { tx } from '../../i18n/core'
 
 type ModelChange =
   | 'none'
@@ -332,7 +333,7 @@ export function ReflectScreen() {
                     <button
                       type="button"
                       className="button button--quiet button--small"
-                      aria-label={`Remove tag ${tag}`}
+                      aria-label={tx('Remove tag {tag}', '移除标签“{tag}”', { tag })}
                       onClick={() =>
                         setContext((current) => ({
                           ...current,

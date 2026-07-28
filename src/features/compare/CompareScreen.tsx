@@ -19,6 +19,7 @@ import {
   useStore,
   useVisibleThoughts,
 } from '../../store'
+import { tx } from '../../i18n/core'
 
 export function CompareScreen() {
   const thoughts = useVisibleThoughts()
@@ -195,10 +196,26 @@ export function CompareScreen() {
         />
         <p className="muted" style={{ margin: 0 }} role="status" aria-live="polite">
           {progress.remaining === 0
-            ? `Nothing left to compare in this mode · ${progress.completed} recorded`
-            : `${progress.completed} of ${progress.total} compared · ${progress.remaining} to go`}
-          {progress.skipped > 0 ? ` · ${progress.skipped} skipped` : null}
-          {` · ${subset.length} thoughts in this set`}
+            ? tx(
+                'Nothing left to compare in this mode · {count} recorded',
+                '此模式下没有剩余组合 · 已记录 {count} 次',
+                { count: progress.completed },
+              )
+            : tx(
+                '{completed} of {total} compared · {remaining} to go',
+                '已比较 {completed} / {total} · 还剩 {remaining} 次',
+                {
+                  completed: progress.completed,
+                  total: progress.total,
+                  remaining: progress.remaining,
+                },
+              )}
+          {progress.skipped > 0
+            ? tx(' · {count} skipped', ' · 已跳过 {count} 次', { count: progress.skipped })
+            : null}
+          {tx(' · {count} thoughts in this set', ' · 本组 {count} 条想法', {
+            count: subset.length,
+          })}
         </p>
       </div>
 

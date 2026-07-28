@@ -9,6 +9,7 @@ import {
 } from '../../domain/typeMap'
 import type { RelationType, ThoughtType } from '../../domain/types'
 import { useStore, useThought, useRelations, useThoughts } from '../../store'
+import { t, tx } from '../../i18n/core'
 
 interface Step {
   prompt: string
@@ -175,7 +176,10 @@ export function BreakdownDialog({
     setDrafts((current) => ({ ...current, [index]: '' }))
     setStatus(
       result.ok
-        ? `Added “${text}” as a ${THOUGHT_TYPE_LABEL[step.type].toLowerCase()}.`
+        ? tx('Added “{text}” as a {type}.', '已将“{text}”添加为“{type}”。', {
+            text,
+            type: t(THOUGHT_TYPE_LABEL[step.type]),
+          })
         : (result.reason ?? 'Could not link the new thought.'),
     )
   }
