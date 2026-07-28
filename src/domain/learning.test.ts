@@ -53,6 +53,23 @@ describe('evidence status', () => {
   })
 })
 
+describe('record factories', () => {
+  it('keeps its defaults when an optional field arrives empty', () => {
+    // Optional form fields arrive as an explicit undefined; that must not
+    // wipe out the timestamp the factory just set.
+    const observation = createObservation(WS, {
+      description: 'Something happened',
+      occurredAt: undefined,
+      energyBefore: undefined,
+    })
+    expect(Number.isNaN(new Date(observation.occurredAt).getTime())).toBe(false)
+    expect(observation.energyBefore).toBeUndefined()
+
+    const evidence = createEvidence(WS, { statement: 'A reading', status: undefined })
+    expect(evidence.status).toBe('emerging')
+  })
+})
+
 describe('mixed support', () => {
   it('needs records on both sides', () => {
     expect(hasMixedSupport({ evidenceIds: ['a'], contradictingEvidenceIds: ['b'] })).toBe(true)

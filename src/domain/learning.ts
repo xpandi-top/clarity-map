@@ -109,6 +109,21 @@ export function emptyContext(): ObservationContext {
   return { tags: [] }
 }
 
+/**
+ * Drops keys whose value is `undefined`.
+ *
+ * Callers build these patches from optional form fields, so an empty field
+ * arrives as an explicit `undefined` — which would otherwise spread over a
+ * factory default and wipe it out (an unset date became `Invalid Date`).
+ */
+function defined<T extends object>(patch: T): Partial<T> {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined) result[key] = value
+  }
+  return result as Partial<T>
+}
+
 /** A workspace that has not learned anything yet. */
 export function emptyLearningData(): LearningData {
   return {
@@ -135,7 +150,7 @@ export function createObservation(
     relatedThoughtIds: [],
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...patch,
+    ...defined(patch),
   }
 }
 
@@ -153,7 +168,7 @@ export function createEvidence(workspaceId: string, patch: Partial<Evidence> = {
     status: 'emerging',
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...patch,
+    ...defined(patch),
   }
 }
 
@@ -175,7 +190,7 @@ export function createHypothesis(
     confidence: 'veryLow',
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...patch,
+    ...defined(patch),
   }
 }
 
@@ -192,7 +207,7 @@ export function createBelief(workspaceId: string, patch: Partial<Belief> = {}): 
     relatedThoughtIds: [],
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...patch,
+    ...defined(patch),
   }
 }
 
@@ -217,7 +232,7 @@ export function createPersonalRule(
     status: 'experimental',
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...patch,
+    ...defined(patch),
   }
 }
 
