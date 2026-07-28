@@ -19,6 +19,7 @@ import {
   useLearningInbox,
   useObservations,
   usePersonalRules,
+  useRelevantLearning,
   useStore,
   useVisibleThoughts,
 } from "../../store";
@@ -106,6 +107,7 @@ export function DashboardScreen() {
 
   // One reminder block, anchored to whatever is most in front of the user.
   const reminderThoughtId = actions[0]?.id ?? importantGoals[0]?.id ?? null;
+  const reminders = useRelevantLearning(reminderThoughtId);
 
   return (
     <div className="stack">
@@ -318,7 +320,10 @@ export function DashboardScreen() {
         </section>
       </div>
 
-      {reminderThoughtId ? (
+      {/* `RelevantLearning` renders nothing when there is nothing to show, so
+          the card around it has to be asked the same question — otherwise an
+          empty card sits on the dashboard. */}
+      {reminderThoughtId && reminders.length > 0 ? (
         <section className="card">
           <RelevantLearning thoughtId={reminderThoughtId} />
         </section>

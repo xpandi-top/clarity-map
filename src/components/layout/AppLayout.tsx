@@ -53,6 +53,29 @@ export function AppLayout() {
   const workspace = useCurrentWorkspace()
   const { pathname } = useLocation()
   const navRef = useRef<HTMLElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+
+  /**
+   * Publishes the header's height as `--app-header-height`.
+   *
+   * Anything else that sticks has to sit below this bar, and the bar's height
+   * changes with the breakpoint and with whether a workspace is open — so it
+   * is measured rather than guessed at in each stylesheet.
+   */
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const publish = () => {
+      document.documentElement.style.setProperty(
+        '--app-header-height',
+        `${header.getBoundingClientRect().height}px`,
+      )
+    }
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [workspace])
 
   // On a narrow screen the row scrolls sideways, and the step you are on can
   // sit past the edge. Bring it back into view whenever the route changes.
@@ -63,7 +86,7 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <header className="app-header" ref={headerRef}>
         <div className="app-header__bar">
           <div className="app-header__identity">
             <NavLink to="/welcome" className="brand">
