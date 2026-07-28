@@ -24,7 +24,7 @@ export function createRankAxis(source: Dimension): Dimension {
     name: tx('{name} (ranking)', '{name}（排名）', { name: t(source.name) }),
     question: tx(
       'Where does this sit when compared on {name}?',
-      '按“{name}”比较时，它排在哪里？',
+      '按“{name}”权衡时，它大致排在什么位置？',
       { name: t(source.name) },
     ),
     description: t('Comes from the comparisons you have made, not from an answer you typed.'),

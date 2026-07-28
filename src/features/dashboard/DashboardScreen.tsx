@@ -253,7 +253,7 @@ export function DashboardScreen() {
                         <span className="faint">
                           {formatDate(update.createdAt)}
                           {update.previousStatement
-                            ? tx(' · was: {text}', ' · 原认知：{text}', {
+                            ? tx(' · was: {text}', ' · 原来的理解：{text}', {
                                 text: update.previousStatement,
                               })
                             : ""}
@@ -309,7 +309,7 @@ export function DashboardScreen() {
                   } awaiting review · {observations} ${
                     observations.length === 1 ? 'observation' : 'observations'
                   } · {beliefs} ${beliefs.length === 1 ? 'belief' : 'beliefs'}`,
-                  '{items} 项待复查 · {observations} 条观察 · {beliefs} 条认知',
+                  '{items} 项待回看 · {observations} 条观察记录 · {beliefs} 条信念',
                   {
                     items: inboxOpenCount(inbox),
                     observations: observations.length,

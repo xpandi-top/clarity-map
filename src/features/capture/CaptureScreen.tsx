@@ -128,7 +128,7 @@ export function CaptureScreen() {
             {unresolved > 0
               ? tx(
                   ' · {count} without a Want or Should answer',
-                  ' · {count} 条尚未回答“想做/该做”',
+                  ' · {count} 条还没区分“我想做/我觉得应该做”',
                   { count: unresolved },
                 )
               : null}
@@ -301,7 +301,7 @@ function CaptureEntry({ thought, focused = false }: { thought: Thought; focused?
         role="group"
         aria-label={tx(
           'Does “{thought}” feel like something you want to do, or something you believe you should do?',
-          '“{thought}”是你想做的，还是认为自己该做的？',
+          '对于“{thought}”，你是真心想做，还是觉得自己应该做？',
           { thought: thought.text },
         )}
         className="row"

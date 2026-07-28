@@ -31,7 +31,7 @@ export interface LearningReminder {
 }
 
 function countPhrase(count: number, singular: string, plural: string): string {
-  if (t('Observation') === '观察') return `${count} 条观察`
+  if (t('Observation') === '观察') return `${count} 条观察记录`
   const words = ['no', 'one', 'two', 'three', 'four', 'five']
   const number = count < words.length ? words[count] : String(count)
   return `${number} ${count === 1 ? singular : plural}`
@@ -54,7 +54,7 @@ function observationReminder(observation: Observation, via: 'link' | 'tag'): Lea
     id: `obs:${observation.id}`,
     kind: 'observation',
     entityId: observation.id,
-    message: tx('You previously recorded: {text}.', '你之前记录过：{text}。', {
+    message: tx('You previously recorded: {text}.', '你曾经记录过：“{text}”。', {
       text: trimStatement(observation.description),
     }),
     detail: [formatDate(observation.occurredAt), change]
@@ -74,7 +74,7 @@ function evidenceReminder(evidence: Evidence, via: 'link' | 'tag'): LearningRemi
     entityId: evidence.id,
     message:
       supporting > 0
-        ? tx('You have {count} suggesting that {text}.', '你有{count}表明：{text}。', {
+        ? tx('You have {count} suggesting that {text}.', '你有{count}支持这一判断：{text}。', {
             count: countPhrase(supporting, 'observation', 'observations'),
             text:
               trimStatement(evidence.statement).charAt(0).toLowerCase() +
@@ -83,7 +83,7 @@ function evidenceReminder(evidence: Evidence, via: 'link' | 'tag'): LearningRemi
         : `${trimStatement(evidence.statement)}.`,
     caution:
       contradicting > 0
-        ? tx('{count} the other way.', '{count}指向相反结论。', {
+        ? tx('{count} the other way.', '另有{count}提供了相反证据。', {
             count: countPhrase(contradicting, 'observation points', 'observations point'),
           })
         : undefined,
@@ -103,7 +103,7 @@ function beliefReminder(belief: Belief, via: 'link' | 'tag'): LearningReminder {
     id: `blf:${belief.id}`,
     kind: 'belief',
     entityId: belief.id,
-    message: tx('Your current working model: {text}.', '你目前的认知：{text}。', {
+    message: tx('Your current working model: {text}.', '你目前的理解是：{text}。', {
       text: trimStatement(belief.statement),
     }),
     detail: belief.description,
@@ -122,7 +122,7 @@ function hypothesisReminder(hypothesis: Hypothesis, via: 'link' | 'tag'): Learni
     id: `hyp:${hypothesis.id}`,
     kind: 'hypothesis',
     entityId: hypothesis.id,
-    message: tx('You are testing: {text}.', '你正在检验：{text}。', {
+    message: tx('You are testing: {text}.', '你正在验证这个假设：{text}。', {
       text: trimStatement(hypothesis.statement),
     }),
     sourceObservationIds: [],
@@ -136,12 +136,12 @@ function ruleReminder(rule: PersonalDefaultRule, via: 'link' | 'tag'): LearningR
     id: `prule:${rule.id}`,
     kind: 'rule',
     entityId: rule.id,
-    message: tx('Your default when {trigger}: {response}.', '当{trigger}时，你的默认做法是：{response}。', {
+    message: tx('Your default when {trigger}: {response}.', '当{trigger}时，你可以优先尝试：{response}。', {
       trigger: trimStatement(rule.triggerDescription),
       response: trimStatement(rule.defaultResponse),
     }),
     detail: rule.exceptionDescription
-      ? tx('Exception: {text}', '例外：{text}', { text: rule.exceptionDescription })
+      ? tx('Exception: {text}', '不适用的情况：{text}', { text: rule.exceptionDescription })
       : undefined,
     caution: review.due ? (review.reason ?? MIXED_EVIDENCE_NOTICE) : undefined,
     sourceObservationIds: [],

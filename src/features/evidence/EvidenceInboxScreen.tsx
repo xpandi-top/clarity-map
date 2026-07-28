@@ -223,7 +223,7 @@ export function EvidenceInboxScreen() {
             } · {archived} archived ${
               archivedCount === 1 ? 'observation' : 'observations'
             }`,
-            '{beliefs} 条认知 · {hypotheses} 个假设 · {archived} 条已归档观察',
+            '{beliefs} 条信念 · {hypotheses} 个假设 · {archived} 条已归档观察',
             { beliefs: beliefs.length, hypotheses: hypotheses.length, archived: archivedCount },
           )}
         </p>

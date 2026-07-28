@@ -17,7 +17,7 @@ export function comparativePrompt(dimension: Dimension): string {
   if (authored) return authored
   return tx(
     'Which one would you put higher on {name}?',
-    '按“{name}”比较，哪一个应该排得更高？',
+    '如果按“{name}”来权衡，你会把哪一项放得更高？',
     { name: dimension.name.toLowerCase() },
   )
 }
@@ -36,7 +36,7 @@ export function suggestComparativeQuestion(name: string): string {
   if (!trimmed) return ''
   return tx(
     'Which one would you put higher on {name}?',
-    '按“{name}”比较，哪一个应该排得更高？',
+    '如果按“{name}”来权衡，你会把哪一项放得更高？',
     { name: trimmed.toLowerCase() },
   )
 }

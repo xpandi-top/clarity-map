@@ -120,7 +120,7 @@ export function buildChecklistMarkdown(
   if (generatedAt) {
     lines.push(
       '',
-      `_${tx('Exported from Clarity Map on {date}.', '由清晰地图导出于 {date}。', {
+      `_${tx('Exported from Clarity Map on {date}.', '由“思路梳理”导出 · {date}', {
         date: generatedAt,
       })}_`,
     )

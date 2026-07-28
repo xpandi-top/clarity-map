@@ -148,7 +148,7 @@ export function MatrixScreen() {
         ? 'Both axes come from your comparisons. Change a position in Compare.'
         : tx(
             '{name} comes from your comparisons and cannot be dragged. The other axis was updated.',
-            '“{name}”来自比较结果，不能拖动。另一个坐标轴已更新。',
+            '“{name}”的位置来自权衡结果，不能直接拖动；另一个坐标轴已更新。',
             { name: t(lockedAxes[0].name) },
           ),
     )
@@ -475,7 +475,7 @@ export function MatrixScreen() {
         <DimensionCreateDialog
           intro={tx(
             'This becomes the {axis} axis as soon as it is created. Two-choice dimensions draw quadrants; scales draw a scatter.',
-            '创建后会立即成为{axis}。二选一维度显示象限，量表维度显示散点图。',
+            '创建后会立即用于{axis}。二选一维度会显示四象限，量表维度会显示散点图。',
             { axis: creatingFor === 'x' ? '横轴' : '纵轴' },
           )}
           onClose={() => setCreatingFor(null)}

@@ -21,11 +21,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale
+    document.title = locale === 'zh-CN' ? '思路梳理' : 'Clarity Map'
     const description = document.querySelector<HTMLMetaElement>('meta[name="description"]')
     if (description) {
       description.content =
         locale === 'zh-CN'
-          ? '清晰地图把零散想法整理成目标、行动和路线图。数据本地保存，无需账户。'
+          ? '“思路梳理”帮助你把纷乱的思绪整理成目标、行动与经验。数据只保存在本地，无需注册账户。'
           : 'Clarity Map turns unstructured thoughts into goals, actions, and roadmaps. Local-first, no account required.'
     }
   }, [locale])

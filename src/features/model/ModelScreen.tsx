@@ -33,7 +33,7 @@ import {
   useStore,
   useThoughts,
 } from '../../store'
-import { formatDate, formatDateTime, tx } from '../../i18n/core'
+import { formatDate, formatDateTime, t, tx } from '../../i18n/core'
 
 type GraphMode = 'learning' | 'combined'
 
@@ -98,11 +98,11 @@ export function ModelScreen() {
   const focusOptions = [
     ...beliefs.map((belief) => ({
       id: belief.id,
-      label: tx('Belief — {text}', '认知——{text}', { text: belief.statement }),
+      label: tx('Belief — {text}', '信念——{text}', { text: belief.statement }),
     })),
     ...personalRules.map((rule) => ({
       id: rule.id,
-      label: tx('Rule — {text}', '默认做法——{text}', { text: rule.name }),
+      label: tx('Rule — {text}', '应对策略——{text}', { text: rule.name }),
     })),
   ]
 
@@ -222,7 +222,7 @@ export function ModelScreen() {
 
                   {update.reason ? (
                     <p className="faint" style={{ margin: 0 }}>
-                      Why: {update.reason}
+                      {tx('Why: {reason}', '原因：{reason}', { reason: update.reason })}
                     </p>
                   ) : null}
 
@@ -244,9 +244,11 @@ export function ModelScreen() {
                       <ul style={{ margin: 0 }}>
                         {rules.map((rule) => (
                           <li key={rule.id}>
-                            {rule.defaultResponse}{' '}
+                            {rule.defaultResponse}
                             <span className="faint">
-                              ({PERSONAL_RULE_STATUS_LABEL[rule.status]})
+                              {tx(' ({status})', '（{status}）', {
+                                status: t(PERSONAL_RULE_STATUS_LABEL[rule.status]),
+                              })}
                             </span>
                           </li>
                         ))}
@@ -394,12 +396,16 @@ export function ModelScreen() {
                     <span className="chip">{PERSONAL_RULE_STATUS_LABEL[rule.status]}</span>
                   </div>
                   <p className="faint" style={{ margin: 0 }}>
-                    When {rule.triggerDescription}
+                    {tx('Applies when: {text}', '适用情境：{text}', {
+                      text: rule.triggerDescription,
+                    })}
                   </p>
                   <p style={{ margin: 0 }}>{rule.defaultResponse}</p>
                   {rule.exceptionDescription ? (
                     <p className="faint" style={{ margin: 0 }}>
-                      Not when: {rule.exceptionDescription}
+                      {tx('Not when: {text}', '以下情况不适用：{text}', {
+                        text: rule.exceptionDescription,
+                      })}
                     </p>
                   ) : null}
                   <div className="row">
