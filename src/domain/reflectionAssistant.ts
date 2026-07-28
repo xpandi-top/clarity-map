@@ -99,7 +99,21 @@ const ACTION_LIMIT: Record<ReflectionEnergyLevel, number> = {
 const isText = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= 800
 
-export function validateReflectionAnalysis(value: unknown): ReflectionAnalysis | null {
+function isChineseResponse(candidate: ReflectionAnalysis): boolean {
+  const containsChinese = (value: string) => /[\u3400-\u9fff]/u.test(value)
+  return (
+    containsChinese(candidate.summary) &&
+    containsChinese(candidate.desired_outcome) &&
+    candidate.actions.every(
+      (action) => containsChinese(action.label) && containsChinese(action.action),
+    )
+  )
+}
+
+export function validateReflectionAnalysis(
+  value: unknown,
+  locale?: Locale,
+): ReflectionAnalysis | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<ReflectionAnalysis>
   if (
@@ -140,7 +154,9 @@ export function validateReflectionAnalysis(value: unknown): ReflectionAnalysis |
       action.estimated_minutes >= 1 &&
       action.estimated_minutes <= ACTION_LIMIT[action.energy_level],
   )
-  return blockersValid && actionsValid ? (candidate as ReflectionAnalysis) : null
+  if (!blockersValid || !actionsValid) return null
+  const validated = candidate as ReflectionAnalysis
+  return locale === 'zh-CN' && !isChineseResponse(validated) ? null : validated
 }
 
 function sentences(text: string): string[] {
@@ -280,13 +296,30 @@ and prefer reducing scope over encouraging willpower. Reduced capacity and rest 
 Return only JSON matching the supplied schema.
 `.trim()
 
+export function reflectionSystemPrompt(locale: Locale): string {
+  if (locale === 'zh-CN') {
+    return `${SYSTEM_PROMPT}
+
+重要语言要求：
+- 所有面向用户的 JSON 字符串值必须只使用自然、简洁的简体中文。
+- 不要用英文概括、解释或命名行动。专有名词可以保留原文。
+- 保持用户原本的语气和意思，不要把中文输入翻译成英文。
+- “可能的阻碍”必须使用“可能”“也许”“看起来”等谨慎说法。`
+  }
+  return `${SYSTEM_PROMPT}
+
+Language requirement: write every user-facing JSON string in clear, natural English.`
+}
+
+const REFLECTION_MODEL_ID = 'Qwen3-0.6B-q4f16_1-MLC'
+
 let enginePromise: Promise<import('@mlc-ai/web-llm').MLCEngineInterface> | null = null
 
 async function getEngine(onProgress?: ReflectionModelProgress) {
   if (!('gpu' in navigator)) throw new Error('webgpu-unavailable')
   if (!enginePromise) {
     enginePromise = import('@mlc-ai/web-llm').then(({ CreateMLCEngine }) =>
-      CreateMLCEngine('Llama-3.2-1B-Instruct-q4f16_1-MLC', {
+      CreateMLCEngine(REFLECTION_MODEL_ID, {
         initProgressCallback: (report) => onProgress?.(report.text),
       }),
     )
@@ -302,7 +335,7 @@ export async function analyzeReflection(
   const engine = await getEngine(onProgress)
   const reply = await engine.chat.completions.create({
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: reflectionSystemPrompt(locale) },
       {
         role: 'user',
         content: `Application language: ${locale === 'zh-CN' ? 'Simplified Chinese' : 'English'}\n\nUser text:\n${text}`,
@@ -310,6 +343,7 @@ export async function analyzeReflection(
     ],
     temperature: 0.2,
     max_tokens: 900,
+    extra_body: { enable_thinking: false },
     response_format: {
       type: 'json_object',
       schema: JSON.stringify(REFLECTION_RESPONSE_SCHEMA),
@@ -317,7 +351,7 @@ export async function analyzeReflection(
   })
   const content = reply.choices[0]?.message.content
   if (!content) throw new Error('empty-model-response')
-  const validated = validateReflectionAnalysis(JSON.parse(content))
+  const validated = validateReflectionAnalysis(JSON.parse(content), locale)
   if (!validated) throw new Error('invalid-model-response')
   return validated
 }
@@ -337,7 +371,7 @@ export async function makeActionSmallerWithModel(
     messages: [
       {
         role: 'system',
-        content: `${SYSTEM_PROMPT}\nReduce the supplied action to one concrete physical action taking no more than two minutes.`,
+        content: `${reflectionSystemPrompt(locale)}\nReduce the supplied action to one concrete physical action taking no more than two minutes.`,
       },
       {
         role: 'user',
@@ -346,11 +380,17 @@ export async function makeActionSmallerWithModel(
     ],
     temperature: 0.1,
     max_tokens: 120,
+    extra_body: { enable_thinking: false },
     response_format: { type: 'json_object', schema: JSON.stringify(schema) },
   })
   const content = reply.choices[0]?.message.content
   if (!content) throw new Error('empty-model-response')
   const parsed = JSON.parse(content) as { action?: unknown }
-  if (!isText(parsed.action)) throw new Error('invalid-model-response')
+  if (
+    !isText(parsed.action) ||
+    (locale === 'zh-CN' && !/[\u3400-\u9fff]/u.test(parsed.action))
+  ) {
+    throw new Error('invalid-model-response')
+  }
   return parsed.action.trim()
 }

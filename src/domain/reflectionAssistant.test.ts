@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createFallbackAnalysis,
+  reflectionSystemPrompt,
   reduceAction,
   validateReflectionAnalysis,
 } from './reflectionAssistant'
@@ -17,6 +18,17 @@ describe('reflection assistant', () => {
     const result = createFallbackAnalysis('Packing feels difficult.', 'en')
     result.actions[0].estimated_minutes = 8
     expect(validateReflectionAnalysis(result)).toBeNull()
+  })
+
+  it('rejects English model output for the Chinese interface', () => {
+    const result = createFallbackAnalysis('Packing feels difficult.', 'en')
+    expect(validateReflectionAnalysis(result, 'zh-CN')).toBeNull()
+  })
+
+  it('gives the model an explicit Simplified Chinese output requirement', () => {
+    const prompt = reflectionSystemPrompt('zh-CN')
+    expect(prompt).toContain('所有面向用户的 JSON 字符串值必须只使用')
+    expect(prompt).toContain('不要把中文输入翻译成英文')
   })
 
   it('deterministically makes compound or counted actions smaller', () => {
