@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CollectionBrowser } from '../../components/common/CollectionBrowser'
+import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
 import {
   BUILTIN_DIMENSION,
   MOTIVATION_SHOULD,
@@ -62,6 +64,7 @@ export function CaptureScreen() {
       return true
     })
   }, [ordered, search, motivationFilter])
+  const browser = useCollectionBrowser(visible.length)
 
   const unresolved = counts.unanswered
   const filtered = search.trim().length > 0 || motivationFilter !== 'all'
@@ -172,6 +175,16 @@ export function CaptureScreen() {
             </p>
           ) : null}
 
+          <CollectionBrowser
+            mode={browser.mode}
+            onModeChange={browser.setMode}
+            index={browser.index}
+            total={visible.length}
+            itemLabel="thought"
+            onPrevious={browser.previous}
+            onNext={browser.next}
+          />
+
           {visible.length === 0 ? (
             <div className="empty-state stack">
               <p style={{ margin: 0 }}>Nothing matches this filter.</p>
@@ -189,8 +202,12 @@ export function CaptureScreen() {
               </div>
             </div>
           ) : (
-            <ul className="capture-list">
-              {visible.map((thought) => (
+            <ul
+              className={`capture-list ${
+                browser.mode === 'focus' ? 'collection-list--focus' : ''
+              }`}
+            >
+              {visible.slice(browser.start, browser.end).map((thought) => (
                 <li key={thought.id}>
                   <CaptureEntry thought={thought} />
                 </li>

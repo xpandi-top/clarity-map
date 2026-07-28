@@ -37,7 +37,6 @@ const WORKFLOW = [...PLAN, ...LEARN]
  */
 const UTILITY = [
   { to: '/dashboard', label: 'Overview' },
-  { to: '/review/importance', label: 'Priorities' },
   { to: '/settings/data', label: 'Settings' },
 ]
 

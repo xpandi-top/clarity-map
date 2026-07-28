@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CollectionBrowser } from '../../components/common/CollectionBrowser'
+import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
 import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import { downstreamIds, rootIds, upstreamIds } from '../../domain/graph'
 import { filterThoughts } from '../../domain/selectors'
@@ -78,6 +80,7 @@ export function RoadmapIndexScreen() {
     () => THOUGHT_TYPES.filter((type) => (countsByType[type] ?? 0) > 0),
     [countsByType],
   )
+  const browser = useCollectionBrowser(listed.length)
 
   const toggleType = (type: ThoughtType) =>
     setTypeFilter((current) =>
@@ -92,9 +95,9 @@ export function RoadmapIndexScreen() {
       </div>
 
       {suggested.length > 0 ? (
-        <section className="card stack" style={{ gap: 'var(--space-2)' }}>
-          <h2 style={{ margin: 0 }}>Good places to start</h2>
-          <div className="row">
+        <details className="concept-guide">
+          <summary>Good places to start ({suggested.length})</summary>
+          <div className="row concept-guide__content">
             {suggested.map((thought) => (
               <Link key={thought.id} className="button" to={`/roadmap/${thought.id}`}>
                 {thought.text}
@@ -104,7 +107,7 @@ export function RoadmapIndexScreen() {
               </Link>
             ))}
           </div>
-        </section>
+        </details>
       ) : null}
 
       <div className="filter-bar">
@@ -170,6 +173,16 @@ export function RoadmapIndexScreen() {
         Showing {listed.length} of {thoughts.length}
       </p>
 
+      <CollectionBrowser
+        mode={browser.mode}
+        onModeChange={browser.setMode}
+        index={browser.index}
+        total={listed.length}
+        itemLabel="roadmap"
+        onPrevious={browser.previous}
+        onNext={browser.next}
+      />
+
       {listed.length === 0 ? (
         <div className="empty-state stack">
           <p style={{ margin: 0 }}>
@@ -202,8 +215,12 @@ export function RoadmapIndexScreen() {
           </div>
         </div>
       ) : (
-        <ul className="settings-list">
-          {listed.map((thought) => {
+        <ul
+          className={`settings-list ${
+            browser.mode === 'focus' ? 'collection-list--focus' : ''
+          }`}
+        >
+          {listed.slice(browser.start, browser.end).map((thought) => {
             const entry = connections.get(thought.id)
             return (
               <li key={thought.id} className="settings-item spread">

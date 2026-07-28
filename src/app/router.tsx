@@ -7,7 +7,6 @@ import { ReflectScreen } from '../features/reflect/ReflectScreen'
 import { EvidenceInboxScreen } from '../features/evidence/EvidenceInboxScreen'
 import { ModelScreen } from '../features/model/ModelScreen'
 import { CaptureScreen } from '../features/capture/CaptureScreen'
-import { ImportanceReviewScreen } from '../features/review/ImportanceReviewScreen'
 import { MatrixScreen } from '../features/matrix/MatrixScreen'
 import { CompareScreen } from '../features/compare/CompareScreen'
 import { StructureScreen } from '../features/structure/StructureScreen'
@@ -29,7 +28,7 @@ export function AppRoutes() {
           <Route path="/reflect" element={<ReflectScreen />} />
           <Route path="/evidence" element={<EvidenceInboxScreen />} />
           <Route path="/model" element={<ModelScreen />} />
-          <Route path="/review/importance" element={<ImportanceReviewScreen />} />
+          <Route path="/review/importance" element={<Navigate to="/compare" replace />} />
           <Route path="/matrix" element={<MatrixScreen />} />
           <Route path="/compare" element={<CompareScreen />} />
           <Route path="/structure" element={<StructureScreen />} />

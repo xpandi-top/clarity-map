@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CollectionBrowser } from '../../components/common/CollectionBrowser'
+import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
 import { DimensionInput } from '../../components/dimensions/DimensionInput'
 import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
 import { BUILTIN_DIMENSION } from '../../domain/defaults'
@@ -43,6 +45,7 @@ export function ActionsScreen() {
     [actionable, flags],
   )
   const suggested = useMemo(() => nextActions(actionable), [actionable])
+  const browser = useCollectionBrowser(filtered.length)
 
   return (
     <div className="stack">
@@ -62,17 +65,21 @@ export function ActionsScreen() {
       ) : null}
 
       {suggested.length > 0 ? (
-        <section className="card">
-          <h2>Next actions</h2>
-          <p className="faint">Sorted by priority, then impact, then least difficulty.</p>
-          <ul className="stack" style={{ gap: 'var(--space-2)' }}>
-            {suggested.map((thought) => (
-              <li key={thought.id}>
-                {thought.text} <ThoughtMeta thought={thought} />
-              </li>
-            ))}
-          </ul>
-        </section>
+        <details className="concept-guide">
+          <summary>See suggested order ({suggested.length})</summary>
+          <div className="stack concept-guide__content">
+            <p className="faint" style={{ margin: 0 }}>
+              Sorted by priority, then impact, then least difficulty.
+            </p>
+            <ol className="stack" style={{ gap: 'var(--space-2)' }}>
+              {suggested.map((thought) => (
+                <li key={thought.id}>
+                  {thought.text} <ThoughtMeta thought={thought} />
+                </li>
+              ))}
+            </ol>
+          </div>
+        </details>
       ) : null}
 
       <fieldset className="filter-bar" style={{ border: 'none', padding: 0, margin: 0 }}>
@@ -103,13 +110,44 @@ export function ActionsScreen() {
         Showing {filtered.length} of {actionable.length}
       </p>
 
-      <ul className="settings-list">
-        {filtered.map((thought) => (
-          <li key={thought.id}>
-            <ActionAssessment thought={thought} />
-          </li>
-        ))}
-      </ul>
+      {actionable.length > 0 ? (
+        <CollectionBrowser
+          mode={browser.mode}
+          onModeChange={browser.setMode}
+          index={browser.index}
+          total={filtered.length}
+          itemLabel="action"
+          onPrevious={browser.previous}
+          onNext={browser.next}
+        />
+      ) : null}
+
+      {actionable.length > 0 && filtered.length === 0 ? (
+        <div className="empty-state stack">
+          <p style={{ margin: 0 }}>No actions match these filters.</p>
+          <div className="row" style={{ justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="button button--small"
+              onClick={() => setFlags(EMPTY_ACTION_FILTERS)}
+            >
+              Clear filters
+            </button>
+          </div>
+        </div>
+      ) : (
+        <ul
+          className={`settings-list ${
+            browser.mode === 'focus' ? 'collection-list--focus' : ''
+          }`}
+        >
+          {filtered.slice(browser.start, browser.end).map((thought) => (
+            <li key={thought.id}>
+              <ActionAssessment thought={thought} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

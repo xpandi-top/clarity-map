@@ -114,6 +114,28 @@ describe('CaptureScreen', () => {
     expect(screen.getByText('Showing 1 of 2')).toBeInTheDocument()
   })
 
+  it('can focus on one thought and browse to the next', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+
+    const input = screen.getByLabelText('Write a thought')
+    await user.type(input, 'First thought{Enter}')
+    await user.type(input, 'Second thought{Enter}')
+
+    expect(screen.getAllByRole('group', { name: /Does “/ })).toHaveLength(2)
+    await user.click(screen.getByRole('button', { name: 'One at a time' }))
+
+    const firstVisible = screen
+      .getByRole('group', { name: /Does “/ })
+      .getAttribute('aria-label')
+    expect(screen.getByText('1 of 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Next thought' }))
+    expect(
+      screen.getByRole('group', { name: /Does “/ }).getAttribute('aria-label'),
+    ).not.toBe(firstVisible)
+  })
+
   it('deletes a thought and offers an undo that restores it', async () => {
     const user = userEvent.setup()
     renderScreen()

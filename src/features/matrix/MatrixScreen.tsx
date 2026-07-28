@@ -446,9 +446,9 @@ export function MatrixScreen() {
         ) : (
           <>
             <p className="faint">
-              These are missing an answer for {xDimension.name} or {yDimension.name}. Open one to
-              answer, or work through them in{' '}
-              <Link to="/review/importance">the importance review</Link>.
+              These are missing an answer for {xDimension.name} or {yDimension.name}. Open a
+              thought to answer in its details, or use <Link to="/compare">Compare</Link> to build
+              a relative ranking.
             </p>
             <ul className="stack" style={{ gap: 'var(--space-2)' }}>
               {unresolved.map((thought) => (

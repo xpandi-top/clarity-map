@@ -86,9 +86,10 @@ observation behind it.
   and filter by Want, Should, or not answered yet.
 - **Want vs Should** — asked once per thought, with `W` / `S` / `Esc` shortcuts,
   never blocking.
-- **Importance review** — one thought at a time, filtered by whether a thought
-  is still unanswered or already marked important or not important, with
-  keyboard navigation and the freedom to change earlier answers.
+- **Focused browsing** — Capture, Structure, Roadmap, and Actions can show the
+  whole list or one thought at a time, with previous / next controls and arrow
+  key navigation. Importance remains editable in each thought’s details, while
+  relative priority lives in Compare.
 - **Two-dimensional matrix** — either axis can be a dimension you answered or
   a **ranking built from your comparisons**, so the matrix works without
   classifying anything first. Two binary dimensions give a four-panel board
@@ -193,7 +194,6 @@ observation behind it.
 | `#/actions` | Assess actions and habits |
 | `#/compare` | Pairwise comparison and ranking |
 | `#/matrix` | Two-dimensional view, from answers or from rankings |
-| `#/review/importance` | Optional: one question, one thought at a time |
 | `#/settings/dimensions` | Create and configure dimensions |
 | `#/settings/rules` | Rules and their suggestions |
 | `#/settings/data` | Workspaces, export, import, and deletion |
@@ -222,8 +222,7 @@ You can move between stages in any order without losing work.
 
 Nothing has to be classified as Want, Should, or important for the matrix to
 be useful: comparing pairs produces a ranking, and either axis can be that
-ranking. Answering a dimension directly is still available — the Importance
-review sits alongside Settings — it is just no longer the only route.
+ranking. Direct dimension answers remain available in each thought’s details.
 
 ---
 

@@ -1070,6 +1070,115 @@
   align-items: center;
 }
 
+.collection-browser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 3.6rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.collection-browser__modes,
+.collection-browser__pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.collection-browser__label {
+  margin-right: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.collection-browser__arrow {
+  width: 2.35rem;
+  padding-inline: 0;
+  font-size: 1rem;
+}
+
+.collection-browser__position {
+  min-width: 4.5rem;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.collection-browser__hint {
+  margin-left: var(--space-1);
+  color: var(--text-faint);
+  font-size: 0.78rem;
+}
+
+.collection-list--focus {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.collection-list--focus > li.settings-item,
+.collection-list--focus > li > .settings-item,
+.collection-list--focus > li > .capture-entry {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  box-shadow: var(--shadow);
+}
+
+.concept-guide {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.concept-guide > summary {
+  padding: var(--space-3) var(--space-4);
+  color: var(--accent-text);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.concept-guide > summary:hover {
+  background: var(--surface-hover);
+}
+
+.concept-guide[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.concept-guide__content {
+  padding: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .collection-browser {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .collection-browser__modes {
+    width: 100%;
+  }
+
+  .collection-browser__modes .button {
+    flex: 1;
+  }
+
+  .collection-browser__pager {
+    justify-content: space-between;
+  }
+
+  .collection-browser__hint {
+    display: none;
+  }
+}
+
 .quick-relation {
   flex-wrap: wrap;
   gap: var(--space-2);

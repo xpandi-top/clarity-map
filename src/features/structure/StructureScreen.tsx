@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { CollectionBrowser } from '../../components/common/CollectionBrowser'
+import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
 import { BreakdownDialog } from '../../components/thoughts/BreakdownDialog'
 import { QuickRelation } from '../../components/thoughts/QuickRelation'
 import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
@@ -39,6 +41,7 @@ export function StructureScreen() {
     () => filterThoughts(thoughts, { types: typeFilter }),
     [thoughts, typeFilter],
   )
+  const browser = useCollectionBrowser(visible.length)
 
   const byId = useMemo(() => new Map(thoughts.map((entry) => [entry.id, entry])), [thoughts])
   const cycles = useMemo(() => findCycles(relations), [relations])
@@ -141,7 +144,9 @@ export function StructureScreen() {
         </div>
       ) : null}
 
-      <section className="card stack">
+      <details className="concept-guide">
+        <summary>Need help choosing a type?</summary>
+        <section className="stack concept-guide__content">
         <div className="spread">
           <div>
             <h2 style={{ margin: 0 }}>How the types fit together</h2>
@@ -246,10 +251,25 @@ export function StructureScreen() {
             ))}
           </div>
         </details>
-      </section>
+        </section>
+      </details>
 
-      <ul className="settings-list">
-        {visible.map((thought) => {
+      <CollectionBrowser
+        mode={browser.mode}
+        onModeChange={browser.setMode}
+        index={browser.index}
+        total={visible.length}
+        itemLabel="thought"
+        onPrevious={browser.previous}
+        onNext={browser.next}
+      />
+
+      <ul
+        className={`settings-list ${
+          browser.mode === 'focus' ? 'collection-list--focus' : ''
+        }`}
+      >
+        {visible.slice(browser.start, browser.end).map((thought) => {
           const outgoing = relations.filter(
             (relation) => relation.sourceThoughtId === thought.id,
           )
