@@ -1,25 +1,45 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { validateImport } from '../../domain/validation'
 import { useStore } from '../../store'
 
 /**
- * The two loops, said plainly before the user meets them in the navigation.
- * Someone arriving here has no idea why "Compare" and "Evidence" sit in
- * different groups; this is where that is explained, once.
+ * The two loops as doors, not as a diagram.
+ *
+ * Both are named here because both are ways in: one starts from what is on
+ * your mind, the other from something that already happened. Explaining them
+ * without letting you enter either would leave the product looking like a
+ * planner with an appendix.
  */
 const PATHS = [
   {
     key: 'plan',
     label: 'Plan',
+    heading: 'Something is on my mind',
     question: 'What matters, and what is the next step?',
-    steps: ['Capture', 'Structure', 'Roadmap', 'Actions', 'Compare', 'Matrix'],
+    cta: 'Write it down',
+    to: '/capture',
+    steps: [
+      { label: 'Capture', to: '/capture' },
+      { label: 'Structure', to: '/structure' },
+      { label: 'Roadmap', to: '/roadmap' },
+      { label: 'Actions', to: '/actions' },
+      { label: 'Compare', to: '/compare' },
+      { label: 'Matrix', to: '/matrix' },
+    ],
   },
   {
     key: 'learn',
     label: 'Learn',
+    heading: 'Something happened',
     question: 'What happened, and what did it tell you?',
-    steps: ['Reflect', 'Evidence', 'Model'],
+    cta: 'Record what happened',
+    to: '/reflect',
+    steps: [
+      { label: 'Reflect', to: '/reflect' },
+      { label: 'Evidence', to: '/evidence' },
+      { label: 'Model', to: '/model' },
+    ],
   },
 ]
 
@@ -54,61 +74,82 @@ export function WelcomeScreen() {
     navigate('/dashboard')
   }
 
+  /**
+   * Enter one of the loops. With no workspace yet, the door makes one — so a
+   * first visit chooses which loop to start in, rather than choosing "start"
+   * and landing wherever the app happens to lead.
+   */
+  const enter = (to: string) => {
+    if (!mostRecent) startWorkspace()
+    else setCurrentWorkspace(mostRecent.id)
+    navigate(to)
+  }
+
   return (
     <div className="welcome">
       <header className="welcome__hero">
         <p className="welcome__eyebrow">Plan what matters. Learn what works.</p>
-        <h1>Write down what is currently on your mind.</h1>
+        <h1>Start with what is on your mind, or with what just happened.</h1>
         <p className="welcome__lede">
-          You do not need to decide whether it is reasonable, important, or actionable yet. We
-          will organize it one question at a time — and keep what you notice along the way, so
-          you do not work it out from scratch again next time.
+          Nothing has to be reasonable, important, or actionable first. We will organize it one
+          question at a time — and keep what you notice along the way, so you do not work it out
+          from scratch again next time.
         </p>
       </header>
 
-      {/* One obvious way in. Everything else is deliberately quieter. */}
-      <section className="start-card">
-        {mostRecent ? (
-          <>
-            <div className="start-card__main">
-              <span className="start-card__label">Pick up where you left off</span>
-              <h2>{mostRecent.name}</h2>
-              <p className="faint">
-                Updated {new Date(mostRecent.updatedAt).toLocaleDateString()}
-              </p>
-            </div>
+      {/* Resuming beats choosing, so it sits above the two doors. */}
+      {mostRecent ? (
+        <section className="start-card">
+          <div className="start-card__main">
+            <span className="start-card__label">Pick up where you left off</span>
+            <h2>{mostRecent.name}</h2>
+            <p className="faint">
+              Updated {new Date(mostRecent.updatedAt).toLocaleDateString()}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="button button--primary button--large"
+            onClick={() => {
+              setCurrentWorkspace(mostRecent.id)
+              navigate('/dashboard')
+            }}
+          >
+            Continue
+          </button>
+        </section>
+      ) : null}
+
+      {/* Both loops, both enterable, neither privileged over the other. */}
+      <section className="path-grid" aria-label="Ways to start">
+        {PATHS.map((path) => (
+          <article key={path.key} className={`path-card path-card--${path.key}`}>
+            <span className="path-card__label">{path.label}</span>
+            <h2 className="path-card__heading">{path.heading}</h2>
+            <p className="path-card__question">{path.question}</p>
+
             <button
               type="button"
-              className="button button--primary button--large"
-              onClick={() => {
-                setCurrentWorkspace(mostRecent.id)
-                navigate('/dashboard')
-              }}
+              className={
+                mostRecent
+                  ? 'button path-card__cta'
+                  : 'button button--primary path-card__cta'
+              }
+              onClick={() => enter(path.to)}
             >
-              Continue
+              {path.cta}
             </button>
-          </>
-        ) : (
-          <>
-            <div className="start-card__main">
-              <span className="start-card__label">First time here</span>
-              <h2>Start with whatever is loudest</h2>
-              <p className="faint">
-                An empty page and one input. Nothing has to be sorted out first.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="button button--primary button--large"
-              onClick={() => {
-                startWorkspace()
-                navigate('/capture')
-              }}
-            >
-              Start
-            </button>
-          </>
-        )}
+
+            <ol className="path-card__steps">
+              {path.steps.map((step) => (
+                <li key={step.to}>
+                  {/* Only a link once there is a workspace to open it in. */}
+                  {mostRecent ? <Link to={step.to}>{step.label}</Link> : step.label}
+                </li>
+              ))}
+            </ol>
+          </article>
+        ))}
       </section>
 
       <div className="row welcome__secondary">
@@ -164,20 +205,6 @@ export function WelcomeScreen() {
           </p>
         </div>
       ) : null}
-
-      <section className="path-grid" aria-label="How Clarity Map is organised">
-        {PATHS.map((path) => (
-          <article key={path.key} className={`path-card path-card--${path.key}`}>
-            <span className="path-card__label">{path.label}</span>
-            <p className="path-card__question">{path.question}</p>
-            <ol className="path-card__steps">
-              {path.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </article>
-        ))}
-      </section>
 
       {others.length > 0 ? (
         <section className="card stack">

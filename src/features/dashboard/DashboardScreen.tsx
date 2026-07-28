@@ -1,16 +1,16 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ConfidenceChip } from '../../components/learning/ConfidenceSelect'
-import { RelevantLearning } from '../../components/learning/RelevantLearning'
-import { BUILTIN_DIMENSION, IMPORTANCE_YES } from '../../domain/defaults'
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ConfidenceChip } from "../../components/learning/ConfidenceSelect";
+import { RelevantLearning } from "../../components/learning/RelevantLearning";
+import { BUILTIN_DIMENSION, IMPORTANCE_YES } from "../../domain/defaults";
 import {
   EVIDENCE_STATUS_LABEL,
   PERSONAL_RULE_STATUS_LABEL,
   derivedEvidenceStatus,
-} from '../../domain/learning'
-import { inboxOpenCount } from '../../domain/learningInbox'
-import { rulesMatchingSituation } from '../../domain/relevance'
-import { nextActions } from '../../domain/selectors'
+} from "../../domain/learning";
+import { inboxOpenCount } from "../../domain/learningInbox";
+import { rulesMatchingSituation } from "../../domain/relevance";
+import { nextActions } from "../../domain/selectors";
 import {
   useBeliefUpdates,
   useBeliefs,
@@ -21,7 +21,7 @@ import {
   usePersonalRules,
   useStore,
   useVisibleThoughts,
-} from '../../store'
+} from "../../store";
 
 /**
  * Two questions side by side: what am I trying to do, and what have I worked
@@ -29,40 +29,49 @@ import {
  * the dashboard should not blur them together.
  */
 export function DashboardScreen() {
-  const workspace = useCurrentWorkspace()
-  const thoughts = useVisibleThoughts()
-  const observations = useObservations()
-  const evidence = useEvidence()
-  const beliefs = useBeliefs()
-  const beliefUpdates = useBeliefUpdates()
-  const personalRules = usePersonalRules()
-  const inbox = useLearningInbox()
-  const selectThought = useStore((state) => state.selectThought)
+  const workspace = useCurrentWorkspace();
+  const thoughts = useVisibleThoughts();
+  const observations = useObservations();
+  const evidence = useEvidence();
+  const beliefs = useBeliefs();
+  const beliefUpdates = useBeliefUpdates();
+  const personalRules = usePersonalRules();
+  const inbox = useLearningInbox();
+  const selectThought = useStore((state) => state.selectThought);
 
-  const [situation, setSituation] = useState('')
+  const [situation, setSituation] = useState("");
 
   const importantGoals = useMemo(
     () =>
       thoughts.filter(
         (thought) =>
-          (thought.type === 'goal' || thought.type === 'outcome' || thought.type === 'vision') &&
-          thought.status === 'active' &&
-          thought.dimensionValues[BUILTIN_DIMENSION.importance] === IMPORTANCE_YES,
+          (thought.type === "goal" ||
+            thought.type === "outcome" ||
+            thought.type === "vision") &&
+          thought.status === "active" &&
+          thought.dimensionValues[BUILTIN_DIMENSION.importance] ===
+            IMPORTANCE_YES,
       ),
     [thoughts],
-  )
+  );
 
   const projects = useMemo(
-    () => thoughts.filter((thought) => thought.type === 'project' && thought.status === 'active'),
+    () =>
+      thoughts.filter(
+        (thought) => thought.type === "project" && thought.status === "active",
+      ),
     [thoughts],
-  )
+  );
 
   const habits = useMemo(
-    () => thoughts.filter((thought) => thought.type === 'habit' && thought.status === 'active'),
+    () =>
+      thoughts.filter(
+        (thought) => thought.type === "habit" && thought.status === "active",
+      ),
     [thoughts],
-  )
+  );
 
-  const actions = useMemo(() => nextActions(thoughts), [thoughts])
+  const actions = useMemo(() => nextActions(thoughts), [thoughts]);
 
   const recentUpdates = useMemo(
     () =>
@@ -70,40 +79,54 @@ export function DashboardScreen() {
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 3),
     [beliefUpdates],
-  )
+  );
 
   const experimentalRules = useMemo(
-    () => personalRules.filter((rule) => rule.status === 'experimental'),
+    () => personalRules.filter((rule) => rule.status === "experimental"),
     [personalRules],
-  )
+  );
 
   const emerging = useMemo(
     () =>
       [...evidence]
-        .filter((entry) => entry.status !== 'retired')
+        .filter((entry) => entry.status !== "retired")
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
         .slice(0, 5),
     [evidence],
-  )
+  );
 
   const matchingRules = useMemo(
     () => rulesMatchingSituation(personalRules, situation),
     [personalRules, situation],
-  )
+  );
+
+  // Nothing recorded is the normal starting state for the learning loop, and
+  // it should read as an invitation rather than as five empty sections.
+  const hasLearning = observations.length > 0 || evidence.length > 0;
 
   // One reminder block, anchored to whatever is most in front of the user.
-  const reminderThoughtId = actions[0]?.id ?? importantGoals[0]?.id ?? null
+  const reminderThoughtId = actions[0]?.id ?? importantGoals[0]?.id ?? null;
 
   return (
     <div className="stack">
       <div className="screen-header">
-        <h1>{workspace?.name ?? 'Dashboard'}</h1>
+        <h1>{workspace?.name ?? "Dashboard"}</h1>
         <p>Plan what matters. Learn what works.</p>
       </div>
 
       <div className="grid-2">
         <section className="card stack">
-          <h2>What I am trying to do</h2>
+          {/* The way into this loop sits in the header, not under a long
+              column where it can fall below the fold. */}
+          <div className="column-head">
+            <div>
+              <span className="column-head__label">Plan</span>
+              <h2>What I am trying to do</h2>
+            </div>
+            <Link className="button button--small" to="/capture">
+              Capture a thought
+            </Link>
+          </div>
 
           <DashboardList
             title="Important goals"
@@ -126,7 +149,10 @@ export function DashboardScreen() {
           <DashboardList
             title="Next actions"
             empty="Nothing classified as an action yet."
-            items={actions.map((thought) => ({ id: thought.id, text: thought.text }))}
+            items={actions.map((thought) => ({
+              id: thought.id,
+              text: thought.text,
+            }))}
             onSelect={selectThought}
           />
           <DashboardList
@@ -139,122 +165,153 @@ export function DashboardScreen() {
             onSelect={selectThought}
           />
 
-          <div className="row">
-            <Link className="button button--small" to="/capture">
-              Capture
+          <div className="row column-foot">
+            <Link
+              className="button button--quiet button--small"
+              to="/structure"
+            >
+              Structure
             </Link>
-            <Link className="button button--small" to="/roadmap">
+            <Link className="button button--quiet button--small" to="/roadmap">
               Roadmaps
             </Link>
-            <Link className="button button--small" to="/actions">
+            <Link className="button button--quiet button--small" to="/actions">
               Actions
             </Link>
           </div>
         </section>
 
         <section className="card stack">
-          <h2>What I am learning</h2>
-
-          <DashboardList
-            title="Recent observations"
-            empty="Nothing recorded yet."
-            items={inbox.recentObservations.slice(0, 5).map((observation) => ({
-              id: observation.id,
-              text: observation.description,
-            }))}
-          />
-
-          <div className="stack" style={{ gap: 'var(--space-1)' }}>
-            <h3 style={{ margin: 0 }}>Emerging patterns</h3>
-            {emerging.length === 0 ? (
-              <p className="faint" style={{ margin: 0 }}>
-                Nothing yet.
-              </p>
-            ) : (
-              <ul className="stack" style={{ gap: 'var(--space-1)' }}>
-                {emerging.map((entry) => (
-                  <li key={entry.id}>
-                    {entry.statement}{' '}
-                    <span className="faint">
-                      {EVIDENCE_STATUS_LABEL[derivedEvidenceStatus(entry)]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="stack" style={{ gap: 'var(--space-1)' }}>
-            <h3 style={{ margin: 0 }}>Beliefs recently updated</h3>
-            {recentUpdates.length === 0 ? (
-              <p className="faint" style={{ margin: 0 }}>
-                Nothing yet.
-              </p>
-            ) : (
-              <ul className="stack" style={{ gap: 'var(--space-1)' }}>
-                {recentUpdates.map((update) => (
-                  <li key={update.id}>
-                    {update.updatedStatement}
-                    <br />
-                    <span className="faint">
-                      {new Date(update.createdAt).toLocaleDateString()}
-                      {update.previousStatement ? ` · was: ${update.previousStatement}` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="stack" style={{ gap: 'var(--space-1)' }}>
-            <h3 style={{ margin: 0 }}>Experimental rules</h3>
-            {experimentalRules.length === 0 ? (
-              <p className="faint" style={{ margin: 0 }}>
-                Nothing being tried yet.
-              </p>
-            ) : (
-              <ul className="stack" style={{ gap: 'var(--space-1)' }}>
-                {experimentalRules.map((rule) => (
-                  <li key={rule.id}>
-                    <strong>{rule.name}</strong> — {rule.defaultResponse}{' '}
-                    <span className="faint">{PERSONAL_RULE_STATUS_LABEL[rule.status]}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="stack" style={{ gap: 'var(--space-1)' }}>
-            <h3 style={{ margin: 0 }}>Contradictory evidence</h3>
-            {inbox.contradictory.length === 0 ? (
-              <p className="faint" style={{ margin: 0 }}>
-                None recorded.
-              </p>
-            ) : (
-              <ul className="stack" style={{ gap: 'var(--space-1)' }}>
-                {inbox.contradictory.map((entry) => (
-                  <li key={entry.id}>
-                    {entry.statement} <ConfidenceChip value={entry.confidence} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <p className="faint" style={{ margin: 0 }}>
-            {inboxOpenCount(inbox)} item{inboxOpenCount(inbox) === 1 ? '' : 's'} awaiting review ·{' '}
-            {observations.length} observation{observations.length === 1 ? '' : 's'} ·{' '}
-            {beliefs.length} belief{beliefs.length === 1 ? '' : 's'}
-          </p>
-
-          <div className="row">
-            <Link className="button button--small button--primary" to="/reflect">
-              Reflect
+          <div className="column-head">
+            <div>
+              <span className="column-head__label column-head__label--learn">
+                Learn
+              </span>
+              <h2>What I am learning</h2>
+            </div>
+            <Link className="button button--small" to="/reflect">
+              Record what happened
             </Link>
-            <Link className="button button--small" to="/evidence">
+          </div>
+
+          {hasLearning ? null : (
+            <p className="empty-state">
+              Nothing recorded yet. When something happens — a decision that
+              went well, an afternoon that went sideways — write it down and see
+              what it turns out to mean.
+            </p>
+          )}
+
+          {hasLearning ? (
+            <>
+              <DashboardList
+                title="Recent observations"
+                empty="Nothing recorded yet."
+                items={inbox.recentObservations
+                  .slice(0, 5)
+                  .map((observation) => ({
+                    id: observation.id,
+                    text: observation.description,
+                  }))}
+              />
+
+              <div className="stack" style={{ gap: "var(--space-1)" }}>
+                <h3 style={{ margin: 0 }}>Emerging patterns</h3>
+                {emerging.length === 0 ? (
+                  <p className="faint" style={{ margin: 0 }}>
+                    Nothing yet.
+                  </p>
+                ) : (
+                  <ul className="stack" style={{ gap: "var(--space-1)" }}>
+                    {emerging.map((entry) => (
+                      <li key={entry.id}>
+                        {entry.statement}{" "}
+                        <span className="faint">
+                          {EVIDENCE_STATUS_LABEL[derivedEvidenceStatus(entry)]}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="stack" style={{ gap: "var(--space-1)" }}>
+                <h3 style={{ margin: 0 }}>Beliefs recently updated</h3>
+                {recentUpdates.length === 0 ? (
+                  <p className="faint" style={{ margin: 0 }}>
+                    Nothing yet.
+                  </p>
+                ) : (
+                  <ul className="stack" style={{ gap: "var(--space-1)" }}>
+                    {recentUpdates.map((update) => (
+                      <li key={update.id}>
+                        {update.updatedStatement}
+                        <br />
+                        <span className="faint">
+                          {new Date(update.createdAt).toLocaleDateString()}
+                          {update.previousStatement
+                            ? ` · was: ${update.previousStatement}`
+                            : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="stack" style={{ gap: "var(--space-1)" }}>
+                <h3 style={{ margin: 0 }}>Experimental rules</h3>
+                {experimentalRules.length === 0 ? (
+                  <p className="faint" style={{ margin: 0 }}>
+                    Nothing being tried yet.
+                  </p>
+                ) : (
+                  <ul className="stack" style={{ gap: "var(--space-1)" }}>
+                    {experimentalRules.map((rule) => (
+                      <li key={rule.id}>
+                        <strong>{rule.name}</strong> — {rule.defaultResponse}{" "}
+                        <span className="faint">
+                          {PERSONAL_RULE_STATUS_LABEL[rule.status]}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="stack" style={{ gap: "var(--space-1)" }}>
+                <h3 style={{ margin: 0 }}>Contradictory evidence</h3>
+                {inbox.contradictory.length === 0 ? (
+                  <p className="faint" style={{ margin: 0 }}>
+                    None recorded.
+                  </p>
+                ) : (
+                  <ul className="stack" style={{ gap: "var(--space-1)" }}>
+                    {inbox.contradictory.map((entry) => (
+                      <li key={entry.id}>
+                        {entry.statement}{" "}
+                        <ConfidenceChip value={entry.confidence} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <p className="faint" style={{ margin: 0 }}>
+                {inboxOpenCount(inbox)} item
+                {inboxOpenCount(inbox) === 1 ? "" : "s"} awaiting review ·{" "}
+                {observations.length} observation
+                {observations.length === 1 ? "" : "s"} · {beliefs.length} belief
+                {beliefs.length === 1 ? "" : "s"}
+              </p>
+            </>
+          ) : null}
+
+          <div className="row column-foot">
+            <Link className="button button--quiet button--small" to="/evidence">
               Evidence
             </Link>
-            <Link className="button button--small" to="/model">
+            <Link className="button button--quiet button--small" to="/model">
               Model
             </Link>
           </div>
@@ -270,7 +327,8 @@ export function DashboardScreen() {
       <section className="card stack">
         <h2>Check your defaults</h2>
         <p className="faint">
-          Type the situation you are in. Only defaults you wrote yourself will appear.
+          Type the situation you are in. Only defaults you wrote yourself will
+          appear.
         </p>
         <div className="field">
           <label htmlFor="dashboard-situation">Where are you right now?</label>
@@ -282,10 +340,10 @@ export function DashboardScreen() {
             onChange={(event) => setSituation(event.target.value)}
           />
         </div>
-        {situation.trim() === '' ? null : matchingRules.length === 0 ? (
+        {situation.trim() === "" ? null : matchingRules.length === 0 ? (
           <p className="faint">Nothing you have recorded matches that yet.</p>
         ) : (
-          <ul className="stack" style={{ gap: 'var(--space-2)' }}>
+          <ul className="stack" style={{ gap: "var(--space-2)" }}>
             {matchingRules.map((rule) => (
               <li key={rule.id}>
                 <strong>{rule.name}</strong>
@@ -299,7 +357,7 @@ export function DashboardScreen() {
         )}
       </section>
     </div>
-  )
+  );
 }
 
 function DashboardList({
@@ -308,20 +366,20 @@ function DashboardList({
   empty,
   onSelect,
 }: {
-  title: string
-  items: Array<{ id: string; text: string }>
-  empty: string
-  onSelect?: (id: string) => void
+  title: string;
+  items: Array<{ id: string; text: string }>;
+  empty: string;
+  onSelect?: (id: string) => void;
 }) {
   return (
-    <div className="stack" style={{ gap: 'var(--space-1)' }}>
+    <div className="stack" style={{ gap: "var(--space-1)" }}>
       <h3 style={{ margin: 0 }}>{title}</h3>
       {items.length === 0 ? (
         <p className="faint" style={{ margin: 0 }}>
           {empty}
         </p>
       ) : (
-        <ul className="stack" style={{ gap: 'var(--space-1)' }}>
+        <ul className="stack" style={{ gap: "var(--space-1)" }}>
           {items.map((item) =>
             onSelect ? (
               <li key={item.id}>
@@ -340,5 +398,5 @@ function DashboardList({
         </ul>
       )}
     </div>
-  )
+  );
 }

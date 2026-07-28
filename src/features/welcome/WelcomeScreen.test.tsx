@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { WelcomeScreen } from './WelcomeScreen'
@@ -12,6 +12,7 @@ function renderScreen() {
       <Routes>
         <Route path="/welcome" element={<WelcomeScreen />} />
         <Route path="/capture" element={<p>Capture screen</p>} />
+        <Route path="/reflect" element={<p>Reflect screen</p>} />
         <Route path="/dashboard" element={<p>Dashboard screen</p>} />
       </Routes>
     </MemoryRouter>,
@@ -24,17 +25,39 @@ beforeEach(() => {
 })
 
 describe('WelcomeScreen', () => {
-  it('offers one primary way in on a first visit', async () => {
+  it('opens the planning loop from a cold start', async () => {
     const user = userEvent.setup()
     renderScreen()
 
-    expect(screen.getByText('First time here')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Start' }))
+    await user.click(screen.getByRole('button', { name: 'Write it down' }))
 
-    // A new workspace has nothing to show on the dashboard, so it opens
-    // straight onto the empty page and one input.
     expect(screen.getByText('Capture screen')).toBeInTheDocument()
     expect(useStore.getState().workspaces).toHaveLength(1)
+  })
+
+  it('opens the learning loop from a cold start, without going through Capture', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+
+    await user.click(screen.getByRole('button', { name: 'Record what happened' }))
+
+    // The whole point: someone whose day just happened has their own door in.
+    expect(screen.getByText('Reflect screen')).toBeInTheDocument()
+    expect(useStore.getState().workspaces).toHaveLength(1)
+  })
+
+  it('enters either loop in the workspace you were last in', async () => {
+    const user = userEvent.setup()
+    const id = useStore.getState().startWorkspace('Last week')
+    useStore.setState({ currentWorkspaceId: null })
+    renderScreen()
+
+    await user.click(screen.getByRole('button', { name: 'Record what happened' }))
+
+    expect(screen.getByText('Reflect screen')).toBeInTheDocument()
+    // No second workspace was created just because a door was used.
+    expect(useStore.getState().workspaces).toHaveLength(1)
+    expect(useStore.getState().currentWorkspaceId).toBe(id)
   })
 
   it('leads with the workspace you were last in, and opens its overview', async () => {
@@ -49,14 +72,28 @@ describe('WelcomeScreen', () => {
     expect(screen.getByText('Dashboard screen')).toBeInTheDocument()
   })
 
-  it('explains the two loops before the navigation asks you to know them', () => {
+  it('offers both loops as ways to start, not as a diagram', () => {
     renderScreen()
 
-    const paths = screen.getByRole('region', { name: 'How Clarity Map is organised' })
-    expect(paths).toHaveTextContent('What matters, and what is the next step?')
-    expect(paths).toHaveTextContent('What happened, and what did it tell you?')
-    expect(paths).toHaveTextContent('Capture')
-    expect(paths).toHaveTextContent('Reflect')
+    const paths = screen.getByRole('region', { name: 'Ways to start' })
+    expect(paths).toHaveTextContent('Something is on my mind')
+    expect(paths).toHaveTextContent('Something happened')
+    expect(within(paths).getByRole('button', { name: 'Write it down' })).toBeInTheDocument()
+    expect(
+      within(paths).getByRole('button', { name: 'Record what happened' }),
+    ).toBeInTheDocument()
+  })
+
+  it('links each loop step once there is a workspace to open it in', () => {
+    useStore.getState().startWorkspace('Mine')
+    renderScreen()
+
+    const paths = screen.getByRole('region', { name: 'Ways to start' })
+    expect(within(paths).getByRole('link', { name: 'Matrix' })).toHaveAttribute(
+      'href',
+      '/matrix',
+    )
+    expect(within(paths).getByRole('link', { name: 'Model' })).toHaveAttribute('href', '/model')
   })
 
   it('lists other workspaces separately from the one it leads with', () => {
