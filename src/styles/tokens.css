@@ -1,34 +1,36 @@
 :root {
-  /* Warm neutral surface, dark grey text, one restrained accent. */
-  --surface: #faf9f6;
+  /* Calm neutral surfaces with enough contrast to make actions unmistakable. */
+  --surface: #f6f8f6;
   --surface-raised: #ffffff;
-  --surface-sunken: #f3f1ec;
-  --surface-hover: #efece5;
+  --surface-sunken: #edf1ee;
+  --surface-hover: #e8eeea;
 
-  --text: #2c2a27;
-  --text-muted: #6b6660;
-  --text-faint: #8f8981;
+  --text: #1f2925;
+  --text-muted: #5e6a65;
+  --text-faint: #7b8781;
 
-  --border: #e2ded6;
-  --border-strong: #cfc9be;
+  --border: #dce4df;
+  --border-strong: #bcc9c2;
 
-  --accent: #4a6b63;
-  --accent-soft: #e6eeeb;
-  --accent-text: #2f4a44;
+  --accent: #326b5b;
+  --accent-hover: #28594c;
+  --accent-soft: #e0eee9;
+  --accent-text: #214c40;
 
   --want: #6b7f4a;
   --want-soft: #eef1e6;
-  --should: #7a6a52;
-  --should-soft: #f2ede4;
+  --should: #685e80;
+  --should-soft: #eeebf4;
 
   --warning: #8a6d3b;
   --warning-soft: #f7efe0;
   --danger: #8c4a42;
   --danger-soft: #f6e9e7;
 
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 14px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -43,9 +45,9 @@
     sans-serif;
   --font-serif: ui-serif, Georgia, 'Iowan Old Style', 'Times New Roman', serif;
 
-  --shadow-sm: 0 1px 2px rgba(44, 42, 39, 0.06);
-  --shadow: 0 4px 16px rgba(44, 42, 39, 0.08);
-  --shadow-lg: 0 12px 40px rgba(44, 42, 39, 0.14);
+  --shadow-sm: 0 1px 2px rgba(25, 43, 35, 0.05);
+  --shadow: 0 8px 24px rgba(25, 43, 35, 0.08);
+  --shadow-lg: 0 20px 50px rgba(25, 43, 35, 0.16);
 
-  --content-width: 68rem;
+  --content-width: 72rem;
 }

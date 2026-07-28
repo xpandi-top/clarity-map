@@ -14,10 +14,10 @@ import { useStore } from '../../store'
 const PATHS = [
   {
     key: 'plan',
-    label: 'Plan',
-    heading: 'Something is on my mind',
-    question: 'What matters, and what is the next step?',
-    cta: 'Write it down',
+    label: 'Start planning',
+    heading: 'I have something on my mind',
+    question: 'Capture it now. You can organize and prioritize it later.',
+    cta: 'Capture a thought',
     to: '/capture',
     steps: [
       { label: 'Capture', to: '/capture' },
@@ -30,10 +30,10 @@ const PATHS = [
   },
   {
     key: 'learn',
-    label: 'Learn',
-    heading: 'Something happened',
-    question: 'What happened, and what did it tell you?',
-    cta: 'Record what happened',
+    label: 'Start reflecting',
+    heading: 'Something just happened',
+    question: 'Record what happened, then decide what — if anything — it means.',
+    cta: 'Reflect on it',
     to: '/reflect',
     steps: [
       { label: 'Reflect', to: '/reflect' },
@@ -88,12 +88,11 @@ export function WelcomeScreen() {
   return (
     <div className="welcome">
       <header className="welcome__hero">
-        <p className="welcome__eyebrow">Plan what matters. Learn what works.</p>
-        <h1>Start with what is on your mind, or with what just happened.</h1>
+        <p className="welcome__eyebrow">A private space to think clearly</p>
+        <h1>Turn what is on your mind into a clear next step.</h1>
         <p className="welcome__lede">
-          Nothing has to be reasonable, important, or actionable first. We will organize it one
-          question at a time — and keep what you notice along the way, so you do not work it out
-          from scratch again next time.
+          Capture a thought, work out what it means, and connect it to what matters. When
+          something happens, save what you learned for next time.
         </p>
       </header>
 
@@ -162,7 +161,7 @@ export function WelcomeScreen() {
               navigate('/capture')
             }}
           >
-            Start a new exploration
+            Start a new workspace
           </button>
         ) : null}
         <button
@@ -235,10 +234,15 @@ export function WelcomeScreen() {
         </section>
       ) : null}
 
-      <p className="faint">
-        By default, your data is stored only in this browser. Clearing browser data may remove
-        your workspace. Export a backup if the information is important.
-      </p>
+      <div className="local-note">
+        <span className="local-note__icon" aria-hidden="true">
+          ✓
+        </span>
+        <p>
+          <strong>Stored on this device.</strong> Your work stays in this browser unless you
+          export it. Clearing browser data may remove it.
+        </p>
+      </div>
     </div>
   )
 }

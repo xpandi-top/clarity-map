@@ -77,10 +77,7 @@ export function CaptureScreen() {
     <div className="capture-page">
       <header className="capture-page__header">
         <h1>Capture</h1>
-        <p>
-          Record first, interpret later. Press Enter to keep a thought, Shift+Enter for a new
-          line.
-        </p>
+        <p>Write down whatever is taking up space in your mind. You can make sense of it later.</p>
       </header>
 
       <div className="capture-page__composer">
@@ -101,6 +98,19 @@ export function CaptureScreen() {
             }
           }}
         />
+        <div className="capture-page__actions">
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={!draft.trim()}
+            onClick={submit}
+          >
+            Add thought
+          </button>
+          <span className="keyboard-hint">
+            <kbd>Enter</kbd> to add · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
+          </span>
+        </div>
         <div className="capture-page__meta">
           <p className="muted" style={{ margin: 0 }} role="status" aria-live="polite">
             {thoughts.length} thought{thoughts.length === 1 ? '' : 's'} captured
@@ -112,8 +122,8 @@ export function CaptureScreen() {
                 Undo last deletion
               </button>
             ) : null}
-            <Link className="button button--primary" to="/structure">
-              Next: Structure
+            <Link className="button" to="/structure">
+              Continue to Structure <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
@@ -268,14 +278,14 @@ function CaptureEntry({ thought }: { thought: Thought }) {
           }
         }}
       >
-        <span className="faint">Want, or should?</span>
+        <span className="capture-entry__question">Does this feel like a want or a should?</span>
         <button
           type="button"
           className="button button--small"
           aria-pressed={motivation === MOTIVATION_WANT}
           onClick={() => choose(MOTIVATION_WANT)}
         >
-          Want <span className="faint">(W)</span>
+          Want <span className="shortcut">(W)</span>
         </button>
         <button
           type="button"
@@ -283,7 +293,7 @@ function CaptureEntry({ thought }: { thought: Thought }) {
           aria-pressed={motivation === MOTIVATION_SHOULD}
           onClick={() => choose(MOTIVATION_SHOULD)}
         >
-          Should <span className="faint">(S)</span>
+          Should <span className="shortcut">(S)</span>
         </button>
         <button
           type="button"
@@ -291,7 +301,7 @@ function CaptureEntry({ thought }: { thought: Thought }) {
           aria-pressed={motivation === undefined}
           onClick={() => choose(null)}
         >
-          Not sure yet <span className="faint">(Esc)</span>
+          Not sure yet <span className="shortcut">(Esc)</span>
         </button>
       </div>
 

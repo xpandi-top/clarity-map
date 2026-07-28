@@ -113,7 +113,7 @@ export function DashboardScreen() {
     <div className="stack">
       <div className="screen-header">
         <h1>{workspace?.name ?? "Dashboard"}</h1>
-        <p>Plan what matters. Learn what works.</p>
+        <p>See what needs attention now, and what you have learned along the way.</p>
       </div>
 
       <div className="grid-2">
@@ -175,7 +175,7 @@ export function DashboardScreen() {
               Structure
             </Link>
             <Link className="button button--quiet button--small" to="/roadmap">
-              Roadmaps
+              Roadmap
             </Link>
             <Link className="button button--quiet button--small" to="/actions">
               Actions
@@ -330,10 +330,9 @@ export function DashboardScreen() {
       ) : null}
 
       <section className="card stack">
-        <h2>Check your defaults</h2>
+        <h2>What has helped before?</h2>
         <p className="faint">
-          Type the situation you are in. Only defaults you wrote yourself will
-          appear.
+          Describe your situation and Clarity Map will surface any matching rules you wrote.
         </p>
         <div className="field">
           <label htmlFor="dashboard-situation">Where are you right now?</label>
@@ -384,20 +383,25 @@ function DashboardList({
           {empty}
         </p>
       ) : (
-        <ul className="stack" style={{ gap: "var(--space-1)" }}>
+        <ul className="dashboard-list">
           {items.map((item) =>
             onSelect ? (
               <li key={item.id}>
                 <button
                   type="button"
-                  className="button button--quiet button--small"
+                  className="dashboard-list__button"
                   onClick={() => onSelect(item.id)}
                 >
-                  {item.text}
+                  <span>{item.text}</span>
+                  <span className="dashboard-list__arrow" aria-hidden="true">
+                    →
+                  </span>
                 </button>
               </li>
             ) : (
-              <li key={item.id}>{item.text}</li>
+              <li key={item.id} className="dashboard-list__item">
+                {item.text}
+              </li>
             ),
           )}
         </ul>

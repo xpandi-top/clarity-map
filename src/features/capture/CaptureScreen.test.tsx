@@ -21,6 +21,24 @@ beforeEach(() => {
 })
 
 describe('CaptureScreen', () => {
+  it('offers an explicit add action and enables it when there is something to save', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+
+    const input = screen.getByLabelText('Write a thought')
+    const add = screen.getByRole('button', { name: 'Add thought' })
+    expect(add).toBeDisabled()
+
+    await user.type(input, 'Call my family')
+    expect(add).toBeEnabled()
+    await user.click(add)
+
+    expect(useStore.getState().thoughts.map((thought) => thought.text)).toEqual([
+      'Call my family',
+    ])
+    expect(input).toHaveValue('')
+  })
+
   it('creates a thought on Enter and clears the input', async () => {
     const user = userEvent.setup()
     renderScreen()

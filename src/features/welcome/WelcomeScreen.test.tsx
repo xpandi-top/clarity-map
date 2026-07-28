@@ -29,7 +29,7 @@ describe('WelcomeScreen', () => {
     const user = userEvent.setup()
     renderScreen()
 
-    await user.click(screen.getByRole('button', { name: 'Write it down' }))
+    await user.click(screen.getByRole('button', { name: 'Capture a thought' }))
 
     expect(screen.getByText('Capture screen')).toBeInTheDocument()
     expect(useStore.getState().workspaces).toHaveLength(1)
@@ -39,7 +39,7 @@ describe('WelcomeScreen', () => {
     const user = userEvent.setup()
     renderScreen()
 
-    await user.click(screen.getByRole('button', { name: 'Record what happened' }))
+    await user.click(screen.getByRole('button', { name: 'Reflect on it' }))
 
     // The whole point: someone whose day just happened has their own door in.
     expect(screen.getByText('Reflect screen')).toBeInTheDocument()
@@ -52,7 +52,7 @@ describe('WelcomeScreen', () => {
     useStore.setState({ currentWorkspaceId: null })
     renderScreen()
 
-    await user.click(screen.getByRole('button', { name: 'Record what happened' }))
+    await user.click(screen.getByRole('button', { name: 'Reflect on it' }))
 
     expect(screen.getByText('Reflect screen')).toBeInTheDocument()
     // No second workspace was created just because a door was used.
@@ -76,12 +76,12 @@ describe('WelcomeScreen', () => {
     renderScreen()
 
     const paths = screen.getByRole('region', { name: 'Ways to start' })
-    expect(paths).toHaveTextContent('Something is on my mind')
-    expect(paths).toHaveTextContent('Something happened')
-    expect(within(paths).getByRole('button', { name: 'Write it down' })).toBeInTheDocument()
+    expect(paths).toHaveTextContent('I have something on my mind')
+    expect(paths).toHaveTextContent('Something just happened')
     expect(
-      within(paths).getByRole('button', { name: 'Record what happened' }),
+      within(paths).getByRole('button', { name: 'Capture a thought' }),
     ).toBeInTheDocument()
+    expect(within(paths).getByRole('button', { name: 'Reflect on it' })).toBeInTheDocument()
   })
 
   it('links each loop step once there is a workspace to open it in', () => {
