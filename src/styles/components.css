@@ -64,6 +64,12 @@
   font-size: 0.85rem;
 }
 
+/* For the one action a screen is actually about. */
+.button--large {
+  padding: 0.65rem 1.4rem;
+  font-size: 1rem;
+}
+
 .button--pressed,
 .button[aria-pressed='true'] {
   background: var(--accent-soft);
