@@ -127,7 +127,7 @@ observation behind it.
   nested or flattened to actions and habits only, with completed thoughts
   already ticked. Copy it, download it as `.md`, or print it.
 - **Action assessment** — difficulty, priority, impact, energy effect, urgency,
-  estimated minutes, and practical flags, with filters and a "Next actions" view.
+  estimated minutes, and practical flags, with filters and a suggested order.
 - **Editable roadmap** — an index that lists the top of each structure by
   default, with search, type filters, and how much sits above and below each
   thought. Opening one gives a laid-out graph you can rearrange by dragging,

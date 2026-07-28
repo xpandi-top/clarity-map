@@ -1131,6 +1131,69 @@
   box-shadow: var(--shadow);
 }
 
+.focused-thought {
+  width: 100%;
+}
+
+.focused-thought-card {
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+}
+
+.focused-thought-card__label,
+.inline-thought-details__label {
+  color: var(--accent-text);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.focused-thought-card__text {
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.inline-thought-details {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.inline-thought-details__header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.inline-thought-details__header h3 {
+  margin: var(--space-1) 0 0;
+}
+
+.inline-thought-details__header p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.inline-thought-details__body {
+  padding: var(--space-5);
+}
+
+.inline-thought-details__footer {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
 .concept-guide {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -1176,6 +1239,16 @@
 
   .collection-browser__hint {
     display: none;
+  }
+
+  .focused-thought-card,
+  .inline-thought-details__body {
+    padding: var(--space-4);
+  }
+
+  .inline-thought-details__header,
+  .inline-thought-details__footer {
+    padding: var(--space-3) var(--space-4);
   }
 }
 

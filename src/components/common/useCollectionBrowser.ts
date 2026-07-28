@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { CollectionViewMode } from './CollectionBrowser'
 
 export function useCollectionBrowser(length: number) {
-  const [mode, setMode] = useState<CollectionViewMode>('list')
+  const [mode, setMode] = useState<CollectionViewMode>('focus')
   const [index, setIndex] = useState(0)
   const safeIndex = length === 0 ? 0 : Math.min(index, length - 1)
 

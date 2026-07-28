@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CollectionBrowser } from '../../components/common/CollectionBrowser'
 import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
+import { FocusedThoughtCard } from '../../components/thoughts/FocusedThoughtCard'
+import { InlineThoughtDetails } from '../../components/thoughts/ThoughtDetailPanel'
 import { THOUGHT_TYPES, THOUGHT_TYPE_LABEL } from '../../domain/defaults'
 import { downstreamIds, rootIds, upstreamIds } from '../../domain/graph'
 import { filterThoughts } from '../../domain/selectors'
@@ -222,6 +224,15 @@ export function RoadmapIndexScreen() {
         >
           {listed.slice(browser.start, browser.end).map((thought) => {
             const entry = connections.get(thought.id)
+            if (browser.mode === 'focus') {
+              return (
+                <li key={thought.id} className="focused-thought stack">
+                  <FocusedThoughtCard thought={thought} label="Roadmap starting point" />
+                  <InlineThoughtDetails thoughtId={thought.id} />
+                </li>
+              )
+            }
+
             return (
               <li key={thought.id} className="settings-item spread">
                 <span>
@@ -237,7 +248,7 @@ export function RoadmapIndexScreen() {
                     className="button button--quiet button--small"
                     onClick={() => selectThought(thought.id)}
                   >
-                    Details
+                    Open details
                   </button>
                   <Link className="button button--small" to={`/roadmap/${thought.id}`}>
                     Open roadmap

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CollectionBrowser } from '../../components/common/CollectionBrowser'
 import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
+import { InlineThoughtDetails } from '../../components/thoughts/ThoughtDetailPanel'
 import {
   BUILTIN_DIMENSION,
   MOTIVATION_SHOULD,
@@ -208,8 +209,14 @@ export function CaptureScreen() {
               }`}
             >
               {visible.slice(browser.start, browser.end).map((thought) => (
-                <li key={thought.id}>
-                  <CaptureEntry thought={thought} />
+                <li
+                  key={thought.id}
+                  className={browser.mode === 'focus' ? 'focused-thought stack' : undefined}
+                >
+                  <CaptureEntry thought={thought} focused={browser.mode === 'focus'} />
+                  {browser.mode === 'focus' ? (
+                    <InlineThoughtDetails thoughtId={thought.id} />
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -220,7 +227,7 @@ export function CaptureScreen() {
   )
 }
 
-function CaptureEntry({ thought }: { thought: Thought }) {
+function CaptureEntry({ thought, focused = false }: { thought: Thought; focused?: boolean }) {
   const updateThought = useStore((state) => state.updateThought)
   const deleteThought = useStore((state) => state.deleteThought)
   const setDimensionValue = useStore((state) => state.setDimensionValue)
@@ -322,32 +329,34 @@ function CaptureEntry({ thought }: { thought: Thought }) {
         </button>
       </div>
 
-      <div className="row">
-        <button
-          type="button"
-          className="button button--quiet button--small"
-          onClick={() => setEditing((value) => !value)}
-        >
-          {editing ? 'Stop editing' : 'Edit'}
-        </button>
-        <button
-          type="button"
-          className="button button--quiet button--small"
-          onClick={() => selectThought(thought.id)}
-        >
-          Details
-        </button>
-        <button
-          type="button"
-          className="button button--quiet button--small"
-          onClick={() => {
-            deleteThought(thought.id)
-            showToast('Thought deleted.')
-          }}
-        >
-          Delete
-        </button>
-      </div>
+      {!focused ? (
+        <div className="row">
+          <button
+            type="button"
+            className="button button--quiet button--small"
+            onClick={() => setEditing((value) => !value)}
+          >
+            {editing ? 'Stop editing' : 'Edit'}
+          </button>
+          <button
+            type="button"
+            className="button button--quiet button--small"
+            onClick={() => selectThought(thought.id)}
+          >
+            Open details
+          </button>
+          <button
+            type="button"
+            className="button button--quiet button--small"
+            onClick={() => {
+              deleteThought(thought.id)
+              showToast('Thought deleted.')
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

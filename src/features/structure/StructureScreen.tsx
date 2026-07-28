@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { CollectionBrowser } from '../../components/common/CollectionBrowser'
 import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
 import { BreakdownDialog } from '../../components/thoughts/BreakdownDialog'
+import { FocusedThoughtCard } from '../../components/thoughts/FocusedThoughtCard'
 import { QuickRelation } from '../../components/thoughts/QuickRelation'
 import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
+import { InlineThoughtDetails } from '../../components/thoughts/ThoughtDetailPanel'
 import { TypeMapDiagram } from '../../components/structure/TypeMapDiagram'
 import { OUTCOME_HINT, looksLikeOutcome } from '../../domain/classification'
 import {
@@ -270,6 +272,15 @@ export function StructureScreen() {
         }`}
       >
         {visible.slice(browser.start, browser.end).map((thought) => {
+          if (browser.mode === 'focus') {
+            return (
+              <li key={thought.id} className="focused-thought stack">
+                <FocusedThoughtCard thought={thought} label="Thought to structure" />
+                <InlineThoughtDetails thoughtId={thought.id} />
+              </li>
+            )
+          }
+
           const outgoing = relations.filter(
             (relation) => relation.sourceThoughtId === thought.id,
           )
@@ -303,7 +314,7 @@ export function StructureScreen() {
                   className="button button--small"
                   onClick={() => selectThought(thought.id)}
                 >
-                  Details and relationships
+                  Open details
                 </button>
                 <button
                   type="button"

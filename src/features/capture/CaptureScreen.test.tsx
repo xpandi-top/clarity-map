@@ -84,6 +84,7 @@ describe('CaptureScreen', () => {
     await user.type(input, 'Learn photography{Enter}')
     await user.type(input, 'Renew the insurance{Enter}')
 
+    await user.click(screen.getByRole('button', { name: 'List' }))
     const wanted = within(screen.getByRole('group', { name: /Learn photography/ }))
     await user.click(wanted.getByRole('button', { name: /^Want/ }))
 
@@ -109,12 +110,12 @@ describe('CaptureScreen', () => {
     await user.type(input, 'Renew the insurance{Enter}')
 
     await user.type(screen.getByPlaceholderText('Search what you have written'), 'insur')
-    expect(screen.getByText('Renew the insurance')).toBeInTheDocument()
+    expect(screen.getAllByText('Renew the insurance')).not.toHaveLength(0)
     expect(screen.queryByText('Learn photography')).not.toBeInTheDocument()
     expect(screen.getByText('Showing 1 of 2')).toBeInTheDocument()
   })
 
-  it('can focus on one thought and browse to the next', async () => {
+  it('shows one thought with its details by default and browses to the next', async () => {
     const user = userEvent.setup()
     renderScreen()
 
@@ -122,18 +123,23 @@ describe('CaptureScreen', () => {
     await user.type(input, 'First thought{Enter}')
     await user.type(input, 'Second thought{Enter}')
 
-    expect(screen.getAllByRole('group', { name: /Does “/ })).toHaveLength(2)
-    await user.click(screen.getByRole('button', { name: 'One at a time' }))
-
     const firstVisible = screen
       .getByRole('group', { name: /Does “/ })
       .getAttribute('aria-label')
     expect(screen.getByText('1 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Thought details' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Thought')).toHaveValue('Second thought')
+    expect(screen.queryByRole('button', { name: 'Open details' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Next thought' }))
     expect(
       screen.getByRole('group', { name: /Does “/ }).getAttribute('aria-label'),
     ).not.toBe(firstVisible)
+
+    await user.click(screen.getByRole('button', { name: 'List' }))
+    expect(screen.getAllByRole('group', { name: /Does “/ })).toHaveLength(2)
+    expect(screen.queryByRole('region', { name: 'Thought details' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Open details' })).toHaveLength(2)
   })
 
   it('deletes a thought and offers an undo that restores it', async () => {
@@ -141,6 +147,7 @@ describe('CaptureScreen', () => {
     renderScreen()
 
     await user.type(screen.getByLabelText('Write a thought'), 'Organize my room{Enter}')
+    await user.click(screen.getByRole('button', { name: 'List' }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     expect(useStore.getState().thoughts).toHaveLength(0)
 

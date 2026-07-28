@@ -131,8 +131,8 @@ export function DashboardScreen() {
           </div>
 
           <DashboardList
-            title="Important goals"
-            empty="No goals marked important yet."
+            title="Goals that matter now"
+            empty="No goals marked as important yet."
             items={importantGoals.slice(0, 5).map((thought) => ({
               id: thought.id,
               text: thought.text,
@@ -140,7 +140,7 @@ export function DashboardScreen() {
             onSelect={selectThought}
           />
           <DashboardList
-            title="Active projects"
+            title="Projects"
             empty="No projects yet."
             items={projects.slice(0, 5).map((thought) => ({
               id: thought.id,
@@ -149,8 +149,8 @@ export function DashboardScreen() {
             onSelect={selectThought}
           />
           <DashboardList
-            title="Next actions"
-            empty="Nothing classified as an action yet."
+            title="Actions"
+            empty="No actions yet."
             items={actions.map((thought) => ({
               id: thought.id,
               text: thought.text,
@@ -158,7 +158,7 @@ export function DashboardScreen() {
             onSelect={selectThought}
           />
           <DashboardList
-            title="Current habits"
+            title="Habits"
             empty="No habits yet."
             items={habits.slice(0, 5).map((thought) => ({
               id: thought.id,

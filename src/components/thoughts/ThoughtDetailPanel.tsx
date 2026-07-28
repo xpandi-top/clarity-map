@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Dialog } from '../common/Dialog'
 import { ConfirmButton } from '../common/ConfirmButton'
@@ -28,7 +28,14 @@ export function ThoughtDetailPanel() {
   return <ThoughtDetail key={thought.id} thought={thought} />
 }
 
-function ThoughtDetail({ thought }: { thought: Thought }) {
+/** The same complete editor, placed beneath a thought in focused browsing. */
+export function InlineThoughtDetails({ thoughtId }: { thoughtId: string }) {
+  const thought = useThought(thoughtId)
+  if (!thought) return null
+  return <ThoughtDetail key={thought.id} thought={thought} inline />
+}
+
+function ThoughtDetail({ thought, inline = false }: { thought: Thought; inline?: boolean }) {
   const navigate = useNavigate()
   const selectedThoughtId = thought.id
   const dimensions = useActiveDimensions()
@@ -98,7 +105,8 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
 
   return (
     <>
-      <Dialog
+      <ThoughtDetailFrame
+        inline={inline}
         title="Thought"
         onClose={close}
         footer={
@@ -112,7 +120,7 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
               onClick={() => {
                 const id = duplicateThought(thought.id)
                 if (id) {
-                  selectThought(id)
+                  if (!inline) selectThought(id)
                   showToast('Duplicated.')
                 }
               }}
@@ -386,11 +394,45 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
             {new Date(thought.updatedAt).toLocaleString()}
           </p>
         </div>
-      </Dialog>
+      </ThoughtDetailFrame>
 
       {showBreakdown ? (
         <BreakdownDialog thoughtId={thought.id} onClose={() => setShowBreakdown(false)} />
       ) : null}
     </>
+  )
+}
+
+function ThoughtDetailFrame({
+  inline,
+  title,
+  onClose,
+  footer,
+  children,
+}: {
+  inline: boolean
+  title: string
+  onClose: () => void
+  footer: ReactNode
+  children: ReactNode
+}) {
+  if (!inline) {
+    return (
+      <Dialog title={title} onClose={onClose} footer={footer}>
+        {children}
+      </Dialog>
+    )
+  }
+
+  return (
+    <section className="inline-thought-details" aria-label="Thought details">
+      <header className="inline-thought-details__header">
+        <span className="inline-thought-details__label">Details</span>
+        <h3>Manage this thought</h3>
+        <p>Review or change anything below, then save when you are finished.</p>
+      </header>
+      <div className="inline-thought-details__body">{children}</div>
+      <footer className="inline-thought-details__footer">{footer}</footer>
+    </section>
   )
 }

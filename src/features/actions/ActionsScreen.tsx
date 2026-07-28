@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { CollectionBrowser } from '../../components/common/CollectionBrowser'
 import { useCollectionBrowser } from '../../components/common/useCollectionBrowser'
 import { DimensionInput } from '../../components/dimensions/DimensionInput'
+import { FocusedThoughtCard } from '../../components/thoughts/FocusedThoughtCard'
 import { ThoughtMeta } from '../../components/thoughts/ThoughtMeta'
+import { InlineThoughtDetails } from '../../components/thoughts/ThoughtDetailPanel'
 import { BUILTIN_DIMENSION } from '../../domain/defaults'
 import { getDimensionValue } from '../../domain/matrix'
 import {
@@ -50,10 +52,10 @@ export function ActionsScreen() {
   return (
     <div className="stack">
       <div className="screen-header">
-        <h1>Actions</h1>
+        <h1>Actions and habits</h1>
         <p>
-          Assess what you could actually do. Nothing here is scheduled — this is only about
-          understanding the work.
+          Review what you can complete and what you want to repeat. Add only the detail that
+          helps you choose what to do.
         </p>
       </div>
 
@@ -66,7 +68,7 @@ export function ActionsScreen() {
 
       {suggested.length > 0 ? (
         <details className="concept-guide">
-          <summary>See suggested order ({suggested.length})</summary>
+          <summary>Suggested order ({suggested.length})</summary>
           <div className="stack concept-guide__content">
             <p className="faint" style={{ margin: 0 }}>
               Sorted by priority, then impact, then least difficulty.
@@ -142,8 +144,18 @@ export function ActionsScreen() {
           }`}
         >
           {filtered.slice(browser.start, browser.end).map((thought) => (
-            <li key={thought.id}>
-              <ActionAssessment thought={thought} />
+            <li
+              key={thought.id}
+              className={browser.mode === 'focus' ? 'focused-thought stack' : undefined}
+            >
+              {browser.mode === 'focus' ? (
+                <>
+                  <FocusedThoughtCard thought={thought} label="Action or habit" />
+                  <InlineThoughtDetails thoughtId={thought.id} />
+                </>
+              ) : (
+                <ActionAssessment thought={thought} />
+              )}
             </li>
           ))}
         </ul>
@@ -181,7 +193,7 @@ function ActionAssessment({ thought }: { thought: Thought }) {
           className="button button--small"
           onClick={() => selectThought(thought.id)}
         >
-          Details
+          Open details
         </button>
       </div>
 
