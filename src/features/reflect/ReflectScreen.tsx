@@ -150,8 +150,16 @@ export function ReflectScreen() {
     }))
     setModelNote('Preparing a private on-device reading… You can continue now.')
 
-    void analyzeReflection(text, locale, (progress) => {
-      if (requestId.current === currentRequest) setModelNote(progress)
+    void analyzeReflection(text, locale, () => {
+      if (requestId.current === currentRequest) {
+        setModelNote(
+          tx(
+            'Loading the on-device model for first use… You can continue now.',
+            '首次加载设备本地模型……你现在就可以继续。',
+            {},
+          ),
+        )
+      }
     })
       .then((analysis) => {
         if (requestId.current !== currentRequest) return
@@ -167,8 +175,9 @@ export function ReflectScreen() {
         })
         setModelNote('On-device suggestions are ready.')
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (requestId.current !== currentRequest) return
+        console.warn('On-device reflection suggestions failed.', error)
         setDraft((current) => ({ ...current, modelState: 'fallback' }))
         setModelNote('On-device suggestions are unavailable. The simple version is ready to use.')
       })

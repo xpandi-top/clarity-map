@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createFallbackAnalysis,
+  parseModelJson,
   reflectionSystemPrompt,
   reduceAction,
   validateReflectionAnalysis,
@@ -29,6 +30,18 @@ describe('reflection assistant', () => {
     const prompt = reflectionSystemPrompt('zh-CN')
     expect(prompt).toContain('所有面向用户的 JSON 字符串值必须只使用')
     expect(prompt).toContain('不要把中文输入翻译成英文')
+  })
+
+  it('parses schema output wrapped by a model template', () => {
+    expect(
+      parseModelJson(`<think>
+
+</think>
+
+\`\`\`json
+{"action":"打开清单。"}
+\`\`\``),
+    ).toEqual({ action: '打开清单。' })
   })
 
   it('deterministically makes compound or counted actions smaller', () => {

@@ -61,6 +61,8 @@ export const ZH_CN: Record<string, string> = {
   'Your original words': '你的原话',
   'Preparing a private on-device reading… You can continue now.':
     '正在设备本地整理这段文字……你现在就可以继续。',
+  'Loading the on-device model for first use… You can continue now.':
+    '首次加载设备本地模型……你现在就可以继续。',
   'On-device suggestions are ready.': '设备本地的建议已准备好。',
   'On-device suggestions are unavailable. The simple version is ready to use.':
     '设备本地建议暂时不可用，基础版本仍可继续使用。',

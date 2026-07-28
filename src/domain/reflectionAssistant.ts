@@ -51,6 +51,7 @@ export const REFLECTION_RESPONSE_SCHEMA = {
     desired_outcome: { type: 'string' },
     observations: {
       type: 'array',
+      minItems: 1,
       maxItems: 5,
       items: { type: 'string' },
     },
@@ -73,7 +74,7 @@ export const REFLECTION_RESPONSE_SCHEMA = {
     },
     actions: {
       type: 'array',
-      minItems: 1,
+      minItems: 3,
       maxItems: 3,
       items: {
         type: 'object',
@@ -87,6 +88,49 @@ export const REFLECTION_RESPONSE_SCHEMA = {
         },
       },
     },
+  },
+} as const
+
+/**
+ * The model-facing schema stays deliberately shallow. Small in-browser models
+ * can loop on whitespace while satisfying deeply nested grammars. The result
+ * is normalized into `ReflectionAnalysis` and validated below.
+ */
+const MODEL_RESPONSE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'summary',
+    'situation',
+    'desired_outcome',
+    'observations',
+    'possible_blockers',
+    'recommended_mode',
+    'very_low_action',
+    'low_action',
+    'medium_action',
+  ],
+  properties: {
+    summary: { type: 'string' },
+    situation: { type: 'string' },
+    desired_outcome: { type: 'string' },
+    observations: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 4,
+      items: { type: 'string' },
+    },
+    possible_blockers: {
+      type: 'array',
+      maxItems: 3,
+      items: { type: 'string' },
+    },
+    recommended_mode: {
+      enum: ['find_first_step', 'clarify', 'recover_energy', 'recommend'],
+    },
+    very_low_action: { type: 'string' },
+    low_action: { type: 'string' },
+    medium_action: { type: 'string' },
   },
 } as const
 
@@ -121,6 +165,7 @@ export function validateReflectionAnalysis(
     !isText(candidate.situation) ||
     !isText(candidate.desired_outcome) ||
     !Array.isArray(candidate.observations) ||
+    candidate.observations.length < 1 ||
     candidate.observations.length > 5 ||
     !candidate.observations.every(isText) ||
     !Array.isArray(candidate.possible_blockers) ||
@@ -129,8 +174,7 @@ export function validateReflectionAnalysis(
       candidate.recommended_mode ?? '',
     ) ||
     !Array.isArray(candidate.actions) ||
-    candidate.actions.length < 1 ||
-    candidate.actions.length > 3
+    candidate.actions.length !== 3
   ) {
     return null
   }
@@ -143,7 +187,9 @@ export function validateReflectionAnalysis(
       isText(blocker.description) &&
       ['low', 'medium', 'high'].includes(blocker.confidence),
   )
-  const actionsValid = candidate.actions.every(
+  const actionsValid =
+    new Set(candidate.actions.map((action) => action.energy_level)).size === 3 &&
+    candidate.actions.every(
     (action) =>
       action &&
       typeof action === 'object' &&
@@ -153,7 +199,7 @@ export function validateReflectionAnalysis(
       typeof action.estimated_minutes === 'number' &&
       action.estimated_minutes >= 1 &&
       action.estimated_minutes <= ACTION_LIMIT[action.energy_level],
-  )
+    )
   if (!blockersValid || !actionsValid) return null
   const validated = candidate as ReflectionAnalysis
   return locale === 'zh-CN' && !isChineseResponse(validated) ? null : validated
@@ -311,18 +357,26 @@ export function reflectionSystemPrompt(locale: Locale): string {
 Language requirement: write every user-facing JSON string in clear, natural English.`
 }
 
-const REFLECTION_MODEL_ID = 'Qwen3-0.6B-q4f16_1-MLC'
+// Qwen 2.5 follows Chinese instructions well without Qwen 3's `<think>`
+// preamble, which conflicts with schema-constrained JSON generation.
+const REFLECTION_MODEL_ID = 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC'
 
 let enginePromise: Promise<import('@mlc-ai/web-llm').MLCEngineInterface> | null = null
 
 async function getEngine(onProgress?: ReflectionModelProgress) {
   if (!('gpu' in navigator)) throw new Error('webgpu-unavailable')
   if (!enginePromise) {
-    enginePromise = import('@mlc-ai/web-llm').then(({ CreateMLCEngine }) =>
-      CreateMLCEngine(REFLECTION_MODEL_ID, {
-        initProgressCallback: (report) => onProgress?.(report.text),
-      }),
-    )
+    enginePromise = import('@mlc-ai/web-llm')
+      .then(({ CreateMLCEngine }) =>
+        CreateMLCEngine(REFLECTION_MODEL_ID, {
+          initProgressCallback: (report) => onProgress?.(report.text),
+        }),
+      )
+      .catch((error: unknown) => {
+        // A failed download/device request must not poison every later attempt.
+        enginePromise = null
+        throw error
+      })
   }
   return enginePromise
 }
@@ -338,20 +392,33 @@ export async function analyzeReflection(
       { role: 'system', content: reflectionSystemPrompt(locale) },
       {
         role: 'user',
-        content: `Application language: ${locale === 'zh-CN' ? 'Simplified Chinese' : 'English'}\n\nUser text:\n${text}`,
+        content: `Application language: ${locale === 'zh-CN' ? 'Simplified Chinese' : 'English'}
+
+Fill the JSON fields as follows:
+- summary: one cautious sentence preserving the user's meaning
+- situation: the current situation only
+- desired_outcome: what the user appears to want, stated cautiously
+- observations: only signals directly supported by the user text
+- possible_blockers: tentative interpretations, each using cautious wording
+- recommended_mode: the kind of help most useful now
+- very_low_action: one concrete action taking at most 2 minutes
+- low_action: one concrete action taking at most 5 minutes
+- medium_action: one concrete action taking at most 10 minutes
+
+User text:
+${text}`,
       },
     ],
     temperature: 0.2,
-    max_tokens: 900,
-    extra_body: { enable_thinking: false },
+    max_tokens: 600,
     response_format: {
       type: 'json_object',
-      schema: JSON.stringify(REFLECTION_RESPONSE_SCHEMA),
+      schema: JSON.stringify(MODEL_RESPONSE_SCHEMA),
     },
   })
   const content = reply.choices[0]?.message.content
   if (!content) throw new Error('empty-model-response')
-  const validated = validateReflectionAnalysis(JSON.parse(content), locale)
+  const validated = normalizeModelResponse(parseModelJson(content), locale)
   if (!validated) throw new Error('invalid-model-response')
   return validated
 }
@@ -380,12 +447,11 @@ export async function makeActionSmallerWithModel(
     ],
     temperature: 0.1,
     max_tokens: 120,
-    extra_body: { enable_thinking: false },
     response_format: { type: 'json_object', schema: JSON.stringify(schema) },
   })
   const content = reply.choices[0]?.message.content
   if (!content) throw new Error('empty-model-response')
-  const parsed = JSON.parse(content) as { action?: unknown }
+  const parsed = parseModelJson(content) as { action?: unknown }
   if (
     !isText(parsed.action) ||
     (locale === 'zh-CN' && !/[\u3400-\u9fff]/u.test(parsed.action))
@@ -393,4 +459,79 @@ export async function makeActionSmallerWithModel(
     throw new Error('invalid-model-response')
   }
   return parsed.action.trim()
+}
+
+/**
+ * JSON mode should return a bare object. Some model templates still wrap it in
+ * a markdown fence or an empty reasoning tag, so remove only those known
+ * wrappers before parsing. Arbitrary prose remains invalid.
+ */
+export function parseModelJson(content: string): unknown {
+  const unwrapped = content
+    .replace(/<think>[\s\S]*?<\/think>/giu, '')
+    .replace(/^\s*```(?:json)?\s*|\s*```\s*$/giu, '')
+    .trim()
+  return JSON.parse(unwrapped)
+}
+
+function normalizeModelResponse(value: unknown, locale: Locale): ReflectionAnalysis | null {
+  if (!value || typeof value !== 'object') return null
+  const result = value as Record<string, unknown>
+  const observations = result.observations
+  const blockers = result.possible_blockers
+  if (
+    !isText(result.summary) ||
+    !isText(result.situation) ||
+    !isText(result.desired_outcome) ||
+    !Array.isArray(observations) ||
+    observations.length < 1 ||
+    !observations.every(isText) ||
+    !Array.isArray(blockers) ||
+    !blockers.every(isText) ||
+    !['find_first_step', 'clarify', 'recover_energy', 'recommend'].includes(
+      String(result.recommended_mode),
+    ) ||
+    !isText(result.very_low_action) ||
+    !isText(result.low_action) ||
+    !isText(result.medium_action)
+  ) {
+    return null
+  }
+
+  const zh = locale === 'zh-CN'
+  return validateReflectionAnalysis(
+    {
+      summary: result.summary,
+      situation: result.situation,
+      desired_outcome: result.desired_outcome,
+      observations: observations.slice(0, 5),
+      possible_blockers: blockers.slice(0, 4).map((description) => ({
+        type: 'possible',
+        description,
+        confidence: 'medium' as const,
+      })),
+      recommended_mode: result.recommended_mode,
+      actions: [
+        {
+          energy_level: 'very_low',
+          label: zh ? '两分钟内' : 'Within two minutes',
+          action: result.very_low_action,
+          estimated_minutes: 2,
+        },
+        {
+          energy_level: 'low',
+          label: zh ? '五分钟内' : 'Within five minutes',
+          action: result.low_action,
+          estimated_minutes: 5,
+        },
+        {
+          energy_level: 'medium',
+          label: zh ? '十分钟内' : 'Within ten minutes',
+          action: result.medium_action,
+          estimated_minutes: 10,
+        },
+      ],
+    },
+    locale,
+  )
 }
