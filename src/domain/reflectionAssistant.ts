@@ -328,6 +328,29 @@ export function reduceAction(action: string, locale: Locale): string | null {
   return null
 }
 
+export function normalizeGeneratedAction(action: string, locale: Locale): string {
+  let normalized = action.trim()
+  if (locale === 'zh-CN') {
+    if (/^(?:如果|当|若)/u.test(normalized) && normalized.includes('，')) {
+      normalized = normalized.slice(normalized.indexOf('，') + 1).trim()
+    }
+    normalized = normalized
+      .replace(/^(?:请|建议|可以|尝试|考虑|先)\s*/u, '')
+      .split(/并(?:且)?|然后|再|或/u)[0]
+      .trim()
+    return /[。！？]$/u.test(normalized) ? normalized : `${normalized}。`
+  }
+
+  if (/^(?:if|when)\b/iu.test(normalized) && normalized.includes(',')) {
+    normalized = normalized.slice(normalized.indexOf(',') + 1).trim()
+  }
+  normalized = normalized
+    .replace(/^(?:please|try to|consider|you can|first)\s+/iu, '')
+    .split(/\s+(?:and|then|or)\s+/iu)[0]
+    .trim()
+  return /[.!?]$/u.test(normalized) ? normalized : `${normalized}.`
+}
+
 const SYSTEM_PROMPT = `
 You turn a person's unstructured account into cautious understanding and an immediately usable next step.
 Never add an observation that is not directly supported by the user's text.
@@ -515,19 +538,19 @@ function normalizeModelResponse(value: unknown, locale: Locale): ReflectionAnaly
         {
           energy_level: 'very_low',
           label: zh ? '两分钟内' : 'Within two minutes',
-          action: result.very_low_action,
+          action: normalizeGeneratedAction(result.very_low_action, locale),
           estimated_minutes: 2,
         },
         {
           energy_level: 'low',
           label: zh ? '五分钟内' : 'Within five minutes',
-          action: result.low_action,
+          action: normalizeGeneratedAction(result.low_action, locale),
           estimated_minutes: 5,
         },
         {
           energy_level: 'medium',
           label: zh ? '十分钟内' : 'Within ten minutes',
-          action: result.medium_action,
+          action: normalizeGeneratedAction(result.medium_action, locale),
           estimated_minutes: 10,
         },
       ],

@@ -3,6 +3,7 @@ import {
   createFallbackAnalysis,
   parseModelJson,
   reflectionSystemPrompt,
+  normalizeGeneratedAction,
   reduceAction,
   validateReflectionAnalysis,
 } from './reflectionAssistant'
@@ -42,6 +43,15 @@ describe('reflection assistant', () => {
 {"action":"打开清单。"}
 \`\`\``),
     ).toEqual({ action: '打开清单。' })
+  })
+
+  it('reduces conditional or compound generated actions to one Chinese action', () => {
+    expect(normalizeGeneratedAction('检查电脑是否能运行并尝试开始打包。', 'zh-CN')).toBe(
+      '检查电脑是否能运行。',
+    )
+    expect(
+      normalizeGeneratedAction('如果电脑无法使用，考虑打印清单或拍照。', 'zh-CN'),
+    ).toBe('打印清单。')
   })
 
   it('deterministically makes compound or counted actions smaller', () => {
