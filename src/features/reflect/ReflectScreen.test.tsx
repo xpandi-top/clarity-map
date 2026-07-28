@@ -41,6 +41,43 @@ describe('ReflectScreen', () => {
     expect(screen.queryByText('Beliefs and model building')).not.toBeInTheDocument()
   })
 
+  it('lets the user edit a suggestion before choosing it', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await reachActions(user)
+
+    expect(
+      screen.getByRole('button', { name: 'Generate new suggestions' }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Edit suggestions' }))
+    const veryLowSuggestion = screen.getByLabelText('Very low energy suggestion')
+    await user.clear(veryLowSuggestion)
+    await user.type(veryLowSuggestion, 'Put my badge beside the front door.')
+    await user.click(screen.getByRole('button', { name: 'Finish editing' }))
+    await user.click(
+      screen.getByRole('button', { name: /Put my badge beside the front door/ }),
+    )
+
+    expect(screen.getByText('Only do this now:')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Put my badge beside the front door.' }))
+      .toBeInTheDocument()
+  })
+
+  it('keeps current suggestions usable when on-device regeneration is unavailable', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await reachActions(user)
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'New suggestions could not be generated. You can edit the current ones.',
+        ),
+      ).toBeInTheDocument(),
+    )
+    expect(screen.getAllByRole('button', { name: /Choose this/ })).toHaveLength(3)
+  })
+
   it('visibly distinguishes observations from possible interpretations and allows edits', async () => {
     const user = userEvent.setup()
     renderScreen()

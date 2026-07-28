@@ -4,6 +4,7 @@ import {
   parseModelJson,
   reflectionSystemPrompt,
   normalizeGeneratedAction,
+  normalizeActionResponse,
   normalizeModelResponse,
   isConcreteGeneratedAction,
   reduceAction,
@@ -54,6 +55,12 @@ describe('reflection assistant', () => {
     expect(
       normalizeGeneratedAction('如果电脑无法使用，考虑打印清单或拍照。', 'zh-CN'),
     ).toBe('打印清单。')
+    expect(normalizeGeneratedAction('开始打包和列出拍摄清单。', 'zh-CN')).toBe(
+      '开始打包。',
+    )
+    expect(normalizeGeneratedAction('打开文件夹，开始整理清单。', 'zh-CN')).toBe(
+      '打开文件夹。',
+    )
   })
 
   it('keeps usable model fields and fills incomplete Chinese output', () => {
@@ -82,6 +89,28 @@ describe('reflection assistant', () => {
   it('rejects questions and accepts concrete Chinese actions', () => {
     expect(isConcreteGeneratedAction('是否可以晚些时候再做。', 'zh-CN')).toBe(false)
     expect(isConcreteGeneratedAction('在电脑上创建一个清单。', 'zh-CN')).toBe(true)
+    expect(isConcreteGeneratedAction('把身份证和充电宝放进包里。', 'zh-CN')).toBe(true)
+    expect(isConcreteGeneratedAction('Pack your ID and power bank.', 'en')).toBe(true)
+    expect(isConcreteGeneratedAction('在明天活动前开始打包。', 'zh-CN')).toBe(false)
+    expect(isConcreteGeneratedAction('Tomorrow, pack the camera bag.', 'en')).toBe(false)
+  })
+
+  it('normalizes context-specific generated actions without replacing them with generic ones', () => {
+    const actions = normalizeActionResponse(
+      {
+        very_low_action: 'Place your convention badge beside your bag.',
+        low_action: 'Write the three camera shots you want tomorrow.',
+        medium_action: 'Pack your camera battery and memory card.',
+      },
+      'find_first_step',
+      'en',
+    )
+
+    expect(actions?.map((action) => action.action)).toEqual([
+      'Place your convention badge beside your bag.',
+      'Write the three camera shots you want tomorrow.',
+      'Pack your camera battery.',
+    ])
   })
 
   it('deterministically makes compound or counted actions smaller', () => {

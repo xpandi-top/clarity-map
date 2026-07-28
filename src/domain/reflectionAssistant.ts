@@ -33,6 +33,13 @@ export interface ReflectionAnalysis {
 
 export type ReflectionModelProgress = (progress: string) => void
 
+export interface ReflectionActionGenerationInput {
+  originalEntry: string
+  analysis: Pick<ReflectionAnalysis, 'situation' | 'desired_outcome' | 'observations' | 'possible_blockers'>
+  mode: ReflectionHelpMode
+  locale: Locale
+}
+
 export const REFLECTION_RESPONSE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -128,6 +135,17 @@ const MODEL_RESPONSE_SCHEMA = {
     recommended_mode: {
       enum: ['find_first_step', 'clarify', 'recover_energy', 'recommend'],
     },
+    very_low_action: { type: 'string' },
+    low_action: { type: 'string' },
+    medium_action: { type: 'string' },
+  },
+} as const
+
+const ACTION_RESPONSE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['very_low_action', 'low_action', 'medium_action'],
+  properties: {
     very_low_action: { type: 'string' },
     low_action: { type: 'string' },
     medium_action: { type: 'string' },
@@ -336,7 +354,7 @@ export function normalizeGeneratedAction(action: string, locale: Locale): string
     }
     normalized = normalized
       .replace(/^(?:请|建议|可以|尝试|考虑|先)\s*/u, '')
-      .split(/并(?:且)?|然后|再|或/u)[0]
+      .split(/并(?:且)?|然后|再|或|(?:和|[，,])(?=(?:列出|列|写下|写|整理|创建|检查|打开|拍摄|准备|收集|打包|保存|发送|完成|开始))/u)[0]
       .trim()
     return /[。！？]$/u.test(normalized) ? normalized : `${normalized}。`
   }
@@ -346,18 +364,20 @@ export function normalizeGeneratedAction(action: string, locale: Locale): string
   }
   normalized = normalized
     .replace(/^(?:please|try to|consider|you can|first)\s+/iu, '')
-    .split(/\s+(?:and|then|or)\s+/iu)[0]
+    .split(/\s+(?:and|then|or)\s+|,\s*(?=(?:open|write|create|list|check|put|take|organize|close|start|choose|gather|record)\b)/iu)[0]
     .trim()
   return /[.!?]$/u.test(normalized) ? normalized : `${normalized}.`
 }
 
 export function isConcreteGeneratedAction(action: string, locale: Locale): boolean {
   if (locale === 'zh-CN') {
-    return /^(?:在[^，。！？]{1,12})?(?:打开|写下|创建|列出|检查|放|拿|整理|关闭|喝|坐|站|走|标记|圈出|完成|开始|移动|选择|删除|添加|收集|打印|拍摄|记录|把|将)/u.test(
+    if (/^(?:在)?明天|^(?:稍后|等到)/u.test(action)) return false
+    return /^(?:在[^，。！？]{1,12})?(?:打开|写下|写|创建|列出|检查|放|拿|整理|关闭|喝|坐|站|走|标记|圈出|完成|开始|移动|选择|删除|添加|收集|打印|拍摄|记录|把|将|准备|设置|保存|复制|输入|挑选|摆放|充电|发送|阅读|画|暂停|伸展|呼吸|休息)/u.test(
       action,
     )
   }
-  return /^(?:open|write|create|list|check|put|take|organize|close|drink|sit|stand|walk|mark|circle|complete|start|move|choose|delete|add|gather|print|record)\b/iu.test(
+  if (/^(?:tomorrow|later|after|before)\b/iu.test(action)) return false
+  return /^(?:open|write|create|list|check|put|take|organize|close|drink|sit|stand|walk|mark|circle|complete|start|move|choose|delete|add|gather|print|record|place|draft|select|pack|plug|charge|review|send|read|name|copy|type|pick|lay|collect|prepare|set|save|highlight|sketch|note|pause|stretch|breathe|rest)\b/iu.test(
     action,
   )
 }
@@ -455,6 +475,131 @@ ${text}`,
   const validated = normalizeModelResponse(parseModelJson(content), text, locale)
   if (!validated) throw new Error('invalid-model-response')
   return validated
+}
+
+export function normalizeActionResponse(
+  value: unknown,
+  mode: ReflectionHelpMode,
+  locale: Locale,
+): ReflectionAction[] | null {
+  if (!value || typeof value !== 'object') return null
+  const result = value as Record<string, unknown>
+  const fallback = fallbackActions(mode, locale)
+  const zh = locale === 'zh-CN'
+  const containsChinese = (value: string) => /[\u3400-\u9fff]/u.test(value)
+  const actionOrFallback = (value: unknown, fallbackAction: string) => {
+    if (!isText(value) || (zh && !containsChinese(value))) return fallbackAction
+    const normalized = normalizeGeneratedAction(value.trim(), locale)
+    return isConcreteGeneratedAction(normalized, locale) ? normalized : fallbackAction
+  }
+
+  return [
+    {
+      energy_level: 'very_low',
+      label: zh ? '两分钟内' : 'Within two minutes',
+      action: actionOrFallback(result.very_low_action, fallback[0].action),
+      estimated_minutes: 2,
+    },
+    {
+      energy_level: 'low',
+      label: zh ? '五分钟内' : 'Within five minutes',
+      action: actionOrFallback(result.low_action, fallback[1].action),
+      estimated_minutes: 5,
+    },
+    {
+      energy_level: 'medium',
+      label: zh ? '十分钟内' : 'Within ten minutes',
+      action: actionOrFallback(result.medium_action, fallback[2].action),
+      estimated_minutes: 10,
+    },
+  ]
+}
+
+export async function generateReflectionActions({
+  originalEntry,
+  analysis,
+  mode,
+  locale,
+}: ReflectionActionGenerationInput): Promise<ReflectionAction[]> {
+  const engine = await getEngine()
+  const effectiveMode = mode === 'recommend' ? 'find_first_step' : mode
+  const actionInstructions =
+    locale === 'zh-CN'
+      ? `这个请求只生成行动建议。每个行动都必须针对下方已确认的情况和希望的结果。
+不要重复“打开开始的位置”“写下一个动作”“完成最小的一部分”等通用占位建议。
+生成三个大小明显不同、内容具体的下一步。三个建议不能只是同一句话的改写。`
+      : `This request is only for action suggestions. Make every action specific to the supplied situation and desired outcome.
+Do not reuse generic placeholder actions such as opening the starting place, naming one movement, or doing the smallest visible part.
+Return three meaningfully different sizes of one context-specific next step. The suggestions must not be paraphrases of one another.`
+  const actionRequest =
+    locale === 'zh-CN'
+      ? `应用语言：简体中文
+所选帮助类型：${effectiveMode}
+
+用户原话：
+${originalEntry}
+
+已确认的情况：
+${analysis.situation}
+
+已确认的希望结果：
+${analysis.desired_outcome}
+
+直接观察到的信号：
+${analysis.observations.join('\n')}
+
+可能的理解：
+${analysis.possible_blockers.map((blocker) => blocker.description).join('\n')}
+
+请生成：
+- very_low_action：一个两分钟内能立刻执行、针对当前情况的行动
+- low_action：一个五分钟内能立刻执行、针对当前情况的行动
+- medium_action：一个十分钟内能立刻执行、针对当前情况的行动`
+      : `Application language: English
+Selected kind of help: ${effectiveMode}
+
+Original account:
+${originalEntry}
+
+Confirmed situation:
+${analysis.situation}
+
+Confirmed desired outcome:
+${analysis.desired_outcome}
+
+Directly observed signals:
+${analysis.observations.join('\n')}
+
+Possible interpretations:
+${analysis.possible_blockers.map((blocker) => blocker.description).join('\n')}
+
+Generate:
+- very_low_action: one immediately executable, situation-specific action taking at most 2 minutes
+- low_action: one immediately executable, situation-specific action taking at most 5 minutes
+- medium_action: one immediately executable, situation-specific action taking at most 10 minutes`
+  const reply = await engine.chat.completions.create({
+    messages: [
+      {
+        role: 'system',
+        content: `${reflectionSystemPrompt(locale)}\n\n${actionInstructions}`,
+      },
+      {
+        role: 'user',
+        content: actionRequest,
+      },
+    ],
+    temperature: 0.45,
+    max_tokens: 220,
+    response_format: {
+      type: 'json_object',
+      schema: JSON.stringify(ACTION_RESPONSE_SCHEMA),
+    },
+  })
+  const content = reply.choices[0]?.message.content
+  if (!content) throw new Error('empty-model-response')
+  const actions = normalizeActionResponse(parseModelJson(content), effectiveMode, locale)
+  if (!actions) throw new Error('invalid-model-response')
+  return actions
 }
 
 export async function makeActionSmallerWithModel(

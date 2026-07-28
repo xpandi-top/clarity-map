@@ -5,6 +5,7 @@ import {
   analyzeReflection,
   createFallbackAnalysis,
   fallbackActions,
+  generateReflectionActions,
   makeActionSmallerWithModel,
   reduceAction,
   type ReflectionAction,
@@ -23,6 +24,7 @@ type ReflectionStep =
   | 'optional_reflection'
 
 type ModelState = 'idle' | 'loading' | 'ready' | 'fallback'
+type ActionGenerationState = 'idle' | 'loading' | 'ready' | 'fallback'
 type Outcome = 'easier' | 'no_change' | 'more_tired' | 'different_blocker'
 
 interface ReflectionDraft {
@@ -104,6 +106,10 @@ export function ReflectScreen() {
   const workspaceId = useCurrentWorkspaceId()
   const [draft, setDraft] = useState<ReflectionDraft>(() => restoreDraft(workspaceId))
   const [editing, setEditing] = useState(false)
+  const [editingActions, setEditingActions] = useState(false)
+  const [actionGenerationState, setActionGenerationState] =
+    useState<ActionGenerationState>('idle')
+  const [actionGenerationNote, setActionGenerationNote] = useState('')
   const [modelNote, setModelNote] = useState(() =>
     draft.modelState === 'fallback'
       ? 'On-device suggestions are unavailable. The simple version is ready to use.'
@@ -117,6 +123,7 @@ export function ReflectScreen() {
   const [evidenceStatement, setEvidenceStatement] = useState('')
   const [strategy, setStrategy] = useState('')
   const requestId = useRef(0)
+  const actionRequestId = useRef(0)
 
   const addObservation = useStore((state) => state.addObservation)
   const addEvidence = useStore((state) => state.addEvidence)
@@ -165,11 +172,17 @@ export function ReflectScreen() {
         if (requestId.current !== currentRequest) return
         setDraft((current) => {
           if (current.originalEntry !== text || current.step === 'capture' || editing) return current
+          const canApplySuggestedActions =
+            current.step === 'reviewing_understanding' ||
+            current.step === 'choosing_help_mode'
           return {
             ...current,
             analysis,
-            helpMode: analysis.recommended_mode,
-            actions: analysis.actions,
+            helpMode:
+              current.step === 'reviewing_understanding'
+                ? analysis.recommended_mode
+                : current.helpMode,
+            actions: canApplySuggestedActions ? analysis.actions : current.actions,
             modelState: 'ready',
           }
         })
@@ -190,25 +203,73 @@ export function ReflectScreen() {
 
   const chooseHelpMode = (mode: ReflectionHelpMode) => {
     requestId.current += 1
+    actionRequestId.current += 1
     setDraft((current) => ({ ...current, helpMode: mode }))
   }
 
-  const continueToActions = () => {
-    setDraft((current) => {
-      if (!current.analysis) return current
-      const effective =
-        current.helpMode === 'recommend' ? current.analysis.recommended_mode : current.helpMode
-      const actions =
-        effective === current.analysis.recommended_mode
-          ? current.analysis.actions.slice(0, 3)
-          : fallbackActions(effective, getActiveLocale())
-      return { ...current, actions, step: 'choosing_action' }
+  const requestGeneratedActions = (
+    analysis: ReflectionAnalysis,
+    mode: ReflectionHelpMode,
+  ) => {
+    const locale = getActiveLocale()
+    const currentRequest = ++actionRequestId.current
+    setEditingActions(false)
+    setActionGenerationState('loading')
+    setActionGenerationNote('Generating suggestions for this situation…')
+
+    void generateReflectionActions({
+      originalEntry: draft.originalEntry,
+      analysis,
+      mode,
+      locale,
     })
+      .then((actions) => {
+        if (actionRequestId.current !== currentRequest) return
+        setDraft((current) =>
+          current.step === 'choosing_action' ? { ...current, actions } : current,
+        )
+        setActionGenerationState('ready')
+        setActionGenerationNote('New suggestions are ready.')
+      })
+      .catch((error: unknown) => {
+        if (actionRequestId.current !== currentRequest) return
+        console.warn('On-device action generation failed.', error)
+        setActionGenerationState('fallback')
+        setActionGenerationNote(
+          'New suggestions could not be generated. You can edit the current ones.',
+        )
+      })
+  }
+
+  const continueToActions = () => {
+    if (!draft.analysis) return
+    const effective =
+      draft.helpMode === 'recommend' ? draft.analysis.recommended_mode : draft.helpMode
+    const actions =
+      effective === draft.analysis.recommended_mode
+        ? draft.analysis.actions.slice(0, 3)
+        : fallbackActions(effective, getActiveLocale())
+    setDraft((current) => ({ ...current, actions, step: 'choosing_action' }))
+    requestGeneratedActions(draft.analysis, effective)
   }
 
   const chooseAction = (action: ReflectionAction) => {
+    actionRequestId.current += 1
+    setEditingActions(false)
     setStarted(false)
     setDraft((current) => ({ ...current, selectedAction: action, step: 'focusing' }))
+  }
+
+  const updateAction = (energyLevel: ReflectionAction['energy_level'], action: string) => {
+    actionRequestId.current += 1
+    setActionGenerationState('idle')
+    setActionGenerationNote('Your edits are ready to choose.')
+    setDraft((current) => ({
+      ...current,
+      actions: current.actions.map((item) =>
+        item.energy_level === energyLevel ? { ...item, action } : item,
+      ),
+    }))
   }
 
   const makeSmaller = () => {
@@ -525,32 +586,113 @@ export function ReflectScreen() {
           <div className="reflection-stage__intro">
             <span className="reflection-stage__number">03</span>
             <div>
-              <h2>Choose the size that fits today</h2>
-              <p className="muted">Each option is a complete next step. Smaller is still useful.</p>
+              <h2>Choose or adjust a step</h2>
+              <p className="muted">
+                These suggestions use your situation and chosen kind of help. Smaller is still
+                useful.
+              </p>
             </div>
           </div>
-          <div className="action-options">
-            {draft.actions.slice(0, 3).map((action) => (
+          <div className="action-tools">
+            <div className="row">
               <button
                 type="button"
-                key={`${action.energy_level}-${action.action}`}
-                className="card action-option"
-                onClick={() => chooseAction(action)}
+                className="button button--secondary"
+                disabled={actionGenerationState === 'loading' || !draft.analysis}
+                onClick={() => {
+                  if (!draft.analysis) return
+                  const effective =
+                    draft.helpMode === 'recommend'
+                      ? draft.analysis.recommended_mode
+                      : draft.helpMode
+                  requestGeneratedActions(draft.analysis, effective)
+                }}
               >
-                <span className={`energy-mark energy-mark--${action.energy_level}`} />
-                <span className="action-option__energy">
-                  {ENERGY_COPY[action.energy_level].name}
-                </span>
-                <strong>{action.action}</strong>
-                <span className="faint">{ENERGY_COPY[action.energy_level].detail}</span>
-                <span className="action-option__choose">Choose this →</span>
+                {actionGenerationState === 'loading'
+                  ? 'Generating suggestions…'
+                  : 'Generate new suggestions'}
               </button>
-            ))}
+              <button
+                type="button"
+                className="button button--quiet"
+                aria-pressed={editingActions}
+                disabled={
+                  editingActions && draft.actions.some((action) => !action.action.trim())
+                }
+                onClick={() => {
+                  actionRequestId.current += 1
+                  setActionGenerationState('idle')
+                  setActionGenerationNote(
+                    editingActions
+                      ? 'Your edits are ready to choose.'
+                      : 'Edit any suggestion below.',
+                  )
+                  setEditingActions((value) => !value)
+                }}
+              >
+                {editingActions ? 'Finish editing' : 'Edit suggestions'}
+              </button>
+            </div>
+            {actionGenerationNote && (
+              <div className="model-status action-generation-status" role="status">
+                <span
+                  className={`model-status__dot model-status__dot--${actionGenerationState}`}
+                />
+                <span>{actionGenerationNote}</span>
+              </div>
+            )}
+          </div>
+          <div className="action-options">
+            {draft.actions.slice(0, 3).map((action) =>
+              editingActions ? (
+                <div
+                  key={action.energy_level}
+                  className="card action-option action-option--editing"
+                >
+                  <span className={`energy-mark energy-mark--${action.energy_level}`} />
+                  <label
+                    className="action-option__energy"
+                    htmlFor={`action-${action.energy_level}`}
+                  >
+                    {ENERGY_COPY[action.energy_level].name}
+                  </label>
+                  <textarea
+                    id={`action-${action.energy_level}`}
+                    className="textarea action-option__editor"
+                    aria-label={`${ENERGY_COPY[action.energy_level].name} suggestion`}
+                    value={action.action}
+                    onChange={(event) =>
+                      updateAction(action.energy_level, event.target.value)
+                    }
+                  />
+                  <span className="faint">{ENERGY_COPY[action.energy_level].detail}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  key={`${action.energy_level}-${action.action}`}
+                  className="card action-option"
+                  onClick={() => chooseAction(action)}
+                >
+                  <span className={`energy-mark energy-mark--${action.energy_level}`} />
+                  <span className="action-option__energy">
+                    {ENERGY_COPY[action.energy_level].name}
+                  </span>
+                  <strong>{action.action}</strong>
+                  <span className="faint">{ENERGY_COPY[action.energy_level].detail}</span>
+                  <span className="action-option__choose">Choose this →</span>
+                </button>
+              ),
+            )}
           </div>
           <button
             type="button"
             className="button button--quiet"
-            onClick={() => setDraft((current) => ({ ...current, step: 'choosing_help_mode' }))}
+            onClick={() => {
+              actionRequestId.current += 1
+              setEditingActions(false)
+              setDraft((current) => ({ ...current, step: 'choosing_help_mode' }))
+            }}
           >
             Choose a different kind of help
           </button>
