@@ -5,6 +5,7 @@ import {
   reflectionSystemPrompt,
   normalizeGeneratedAction,
   normalizeModelResponse,
+  isConcreteGeneratedAction,
   reduceAction,
   validateReflectionAnalysis,
 } from './reflectionAssistant'
@@ -76,6 +77,11 @@ describe('reflection assistant', () => {
     expect(result?.observations).toHaveLength(1)
     expect(result?.actions).toHaveLength(3)
     expect(result?.actions.every((action) => /[\u3400-\u9fff]/u.test(action.action))).toBe(true)
+  })
+
+  it('rejects questions and accepts concrete Chinese actions', () => {
+    expect(isConcreteGeneratedAction('是否可以晚些时候再做。', 'zh-CN')).toBe(false)
+    expect(isConcreteGeneratedAction('在电脑上创建一个清单。', 'zh-CN')).toBe(true)
   })
 
   it('deterministically makes compound or counted actions smaller', () => {

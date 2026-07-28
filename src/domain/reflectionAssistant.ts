@@ -351,6 +351,17 @@ export function normalizeGeneratedAction(action: string, locale: Locale): string
   return /[.!?]$/u.test(normalized) ? normalized : `${normalized}.`
 }
 
+export function isConcreteGeneratedAction(action: string, locale: Locale): boolean {
+  if (locale === 'zh-CN') {
+    return /^(?:在[^，。！？]{1,12})?(?:打开|写下|创建|列出|检查|放|拿|整理|关闭|喝|坐|站|走|标记|圈出|完成|开始|移动|选择|删除|添加|收集|打印|拍摄|记录|把|将)/u.test(
+      action,
+    )
+  }
+  return /^(?:open|write|create|list|check|put|take|organize|close|drink|sit|stand|walk|mark|circle|complete|start|move|choose|delete|add|gather|print|record)\b/iu.test(
+    action,
+  )
+}
+
 const SYSTEM_PROMPT = `
 You turn a person's unstructured account into cautious understanding and an immediately usable next step.
 Never add an observation that is not directly supported by the user's text.
@@ -526,6 +537,13 @@ export function normalizeModelResponse(
   ].includes(String(result.recommended_mode))
     ? (result.recommended_mode as ReflectionHelpMode)
     : fallback.recommended_mode
+  const actionOrFallback = (value: unknown, fallbackAction: string) => {
+    const normalized = normalizeGeneratedAction(
+      usableText(value, fallbackAction),
+      locale,
+    )
+    return isConcreteGeneratedAction(normalized, locale) ? normalized : fallbackAction
+  }
 
   return validateReflectionAnalysis(
     {
@@ -543,28 +561,19 @@ export function normalizeModelResponse(
         {
           energy_level: 'very_low',
           label: zh ? '两分钟内' : 'Within two minutes',
-          action: normalizeGeneratedAction(
-            usableText(result.very_low_action, fallback.actions[0].action),
-            locale,
-          ),
+          action: actionOrFallback(result.very_low_action, fallback.actions[0].action),
           estimated_minutes: 2,
         },
         {
           energy_level: 'low',
           label: zh ? '五分钟内' : 'Within five minutes',
-          action: normalizeGeneratedAction(
-            usableText(result.low_action, fallback.actions[1].action),
-            locale,
-          ),
+          action: actionOrFallback(result.low_action, fallback.actions[1].action),
           estimated_minutes: 5,
         },
         {
           energy_level: 'medium',
           label: zh ? '十分钟内' : 'Within ten minutes',
-          action: normalizeGeneratedAction(
-            usableText(result.medium_action, fallback.actions[2].action),
-            locale,
-          ),
+          action: actionOrFallback(result.medium_action, fallback.actions[2].action),
           estimated_minutes: 10,
         },
       ],
