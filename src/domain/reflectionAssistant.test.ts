@@ -4,6 +4,7 @@ import {
   parseModelJson,
   reflectionSystemPrompt,
   normalizeGeneratedAction,
+  normalizeModelResponse,
   reduceAction,
   validateReflectionAnalysis,
 } from './reflectionAssistant'
@@ -52,6 +53,29 @@ describe('reflection assistant', () => {
     expect(
       normalizeGeneratedAction('如果电脑无法使用，考虑打印清单或拍照。', 'zh-CN'),
     ).toBe('打印清单。')
+  })
+
+  it('keeps usable model fields and fills incomplete Chinese output', () => {
+    const result = normalizeModelResponse(
+      {
+        summary: '当前有两件准备工作还没有开始。',
+        situation: '',
+        desired_outcome: 'English only',
+        observations: [],
+        possible_blockers: [],
+        recommended_mode: 'find_first_step',
+        very_low_action: '把证件放到桌上。',
+      },
+      '我明天要参加活动，现在还没有开始打包。',
+      'zh-CN',
+    )
+
+    expect(result?.summary).toBe('当前有两件准备工作还没有开始。')
+    expect(result?.situation).toBe('我明天要参加活动，现在还没有开始打包。')
+    expect(result?.desired_outcome).toBe('让眼前的情况向前一点。')
+    expect(result?.observations).toHaveLength(1)
+    expect(result?.actions).toHaveLength(3)
+    expect(result?.actions.every((action) => /[\u3400-\u9fff]/u.test(action.action))).toBe(true)
   })
 
   it('deterministically makes compound or counted actions smaller', () => {

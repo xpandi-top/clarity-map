@@ -441,7 +441,7 @@ ${text}`,
   })
   const content = reply.choices[0]?.message.content
   if (!content) throw new Error('empty-model-response')
-  const validated = normalizeModelResponse(parseModelJson(content), locale)
+  const validated = normalizeModelResponse(parseModelJson(content), text, locale)
   if (!validated) throw new Error('invalid-model-response')
   return validated
 }
@@ -497,60 +497,74 @@ export function parseModelJson(content: string): unknown {
   return JSON.parse(unwrapped)
 }
 
-function normalizeModelResponse(value: unknown, locale: Locale): ReflectionAnalysis | null {
+export function normalizeModelResponse(
+  value: unknown,
+  originalText: string,
+  locale: Locale,
+): ReflectionAnalysis | null {
   if (!value || typeof value !== 'object') return null
   const result = value as Record<string, unknown>
-  const observations = result.observations
-  const blockers = result.possible_blockers
-  if (
-    !isText(result.summary) ||
-    !isText(result.situation) ||
-    !isText(result.desired_outcome) ||
-    !Array.isArray(observations) ||
-    observations.length < 1 ||
-    !observations.every(isText) ||
-    !Array.isArray(blockers) ||
-    !blockers.every(isText) ||
-    !['find_first_step', 'clarify', 'recover_energy', 'recommend'].includes(
-      String(result.recommended_mode),
-    ) ||
-    !isText(result.very_low_action) ||
-    !isText(result.low_action) ||
-    !isText(result.medium_action)
-  ) {
-    return null
-  }
-
+  const fallback = createFallbackAnalysis(originalText, locale)
   const zh = locale === 'zh-CN'
+  const containsChinese = (value: string) => /[\u3400-\u9fff]/u.test(value)
+  const usableText = (value: unknown, fallbackValue: string) =>
+    isText(value) && (!zh || containsChinese(value)) ? value.trim() : fallbackValue
+  const observations = Array.isArray(result.observations)
+    ? result.observations.filter(isText).slice(0, 5)
+    : []
+  const blockers = Array.isArray(result.possible_blockers)
+    ? result.possible_blockers
+        .filter(isText)
+        .filter((blocker) => !zh || containsChinese(blocker))
+        .slice(0, 4)
+    : []
+  const recommendedMode = [
+    'find_first_step',
+    'clarify',
+    'recover_energy',
+    'recommend',
+  ].includes(String(result.recommended_mode))
+    ? (result.recommended_mode as ReflectionHelpMode)
+    : fallback.recommended_mode
+
   return validateReflectionAnalysis(
     {
-      summary: result.summary,
-      situation: result.situation,
-      desired_outcome: result.desired_outcome,
-      observations: observations.slice(0, 5),
-      possible_blockers: blockers.slice(0, 4).map((description) => ({
+      summary: usableText(result.summary, fallback.summary),
+      situation: usableText(result.situation, fallback.situation),
+      desired_outcome: usableText(result.desired_outcome, fallback.desired_outcome),
+      observations: observations.length ? observations : fallback.observations,
+      possible_blockers: blockers.map((description) => ({
         type: 'possible',
         description,
         confidence: 'medium' as const,
       })),
-      recommended_mode: result.recommended_mode,
+      recommended_mode: recommendedMode,
       actions: [
         {
           energy_level: 'very_low',
           label: zh ? '两分钟内' : 'Within two minutes',
-          action: normalizeGeneratedAction(result.very_low_action, locale),
+          action: normalizeGeneratedAction(
+            usableText(result.very_low_action, fallback.actions[0].action),
+            locale,
+          ),
           estimated_minutes: 2,
         },
         {
           energy_level: 'low',
           label: zh ? '五分钟内' : 'Within five minutes',
-          action: normalizeGeneratedAction(result.low_action, locale),
+          action: normalizeGeneratedAction(
+            usableText(result.low_action, fallback.actions[1].action),
+            locale,
+          ),
           estimated_minutes: 5,
         },
         {
           energy_level: 'medium',
           label: zh ? '十分钟内' : 'Within ten minutes',
-          action: normalizeGeneratedAction(result.medium_action, locale),
+          action: normalizeGeneratedAction(
+            usableText(result.medium_action, fallback.actions[2].action),
+            locale,
+          ),
           estimated_minutes: 10,
         },
       ],
