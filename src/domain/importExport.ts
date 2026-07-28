@@ -23,10 +23,23 @@ export interface ImportPreview {
     relations: number
     comparisons: number
     rules: number
+    /** Observations, evidence, hypotheses, beliefs, updates, and rules. */
+    learningRecords: number
     /** True when a workspace with this id already exists locally. */
     conflicts: boolean
   }>
   totalThoughts: number
+}
+
+function countLearning(entry: WorkspaceData): number {
+  return (
+    entry.observations.length +
+    entry.evidence.length +
+    entry.hypotheses.length +
+    entry.beliefs.length +
+    entry.beliefUpdates.length +
+    entry.personalRules.length
+  )
 }
 
 export function buildImportPreview(
@@ -42,6 +55,7 @@ export function buildImportPreview(
       relations: entry.relations.length,
       comparisons: entry.comparisons.length,
       rules: entry.rules.length,
+      learningRecords: countLearning(entry),
       conflicts: existing.has(entry.workspace.id),
     })),
     totalThoughts: envelope.data.workspaces.reduce(
@@ -62,6 +76,22 @@ export function reassignIds(entry: WorkspaceData): WorkspaceData {
   for (const thought of entry.thoughts) thoughtIdMap.set(thought.id, createId('th'))
 
   const mapThought = (id: string) => thoughtIdMap.get(id) ?? id
+
+  // Learning records reference each other by id as well as referencing
+  // thoughts, so every chain — observation to evidence to belief to rule —
+  // has to be remapped together or the history comes apart.
+  const learningIdMap = new Map<string, string>()
+  const remember = (id: string, prefix: string) => learningIdMap.set(id, createId(prefix))
+  for (const observation of entry.observations) remember(observation.id, 'obs')
+  for (const evidence of entry.evidence) remember(evidence.id, 'evd')
+  for (const hypothesis of entry.hypotheses) remember(hypothesis.id, 'hyp')
+  for (const belief of entry.beliefs) remember(belief.id, 'blf')
+  for (const rule of entry.personalRules) remember(rule.id, 'prule')
+
+  const mapLearning = (id: string) => learningIdMap.get(id) ?? id
+  const mapLearningList = (ids: string[] | undefined) => (ids ?? []).map(mapLearning)
+  const mapLearningOptional = (id: string | undefined) =>
+    id === undefined ? undefined : mapLearning(id)
 
   return {
     workspace: { ...entry.workspace, id: workspaceId },
@@ -88,5 +118,66 @@ export function reassignIds(entry: WorkspaceData): WorkspaceData {
     })),
     rules: entry.rules.map((rule) => ({ ...rule, workspaceId })),
     dismissedSuggestionIds: [],
+    observations: entry.observations.map((observation) => ({
+      ...observation,
+      id: mapLearning(observation.id),
+      workspaceId,
+      relatedThoughtIds: observation.relatedThoughtIds.map(mapThought),
+    })),
+    evidence: entry.evidence.map((evidence) => ({
+      ...evidence,
+      id: mapLearning(evidence.id),
+      workspaceId,
+      observationIds: mapLearningList(evidence.observationIds),
+      supportingObservationIds: mapLearningList(evidence.supportingObservationIds),
+      contradictingObservationIds: mapLearningList(evidence.contradictingObservationIds),
+      relatedThoughtIds: evidence.relatedThoughtIds.map(mapThought),
+    })),
+    hypotheses: entry.hypotheses.map((hypothesis) => ({
+      ...hypothesis,
+      id: mapLearning(hypothesis.id),
+      workspaceId,
+      relatedValueIds: hypothesis.relatedValueIds.map(mapThought),
+      relatedGoalIds: hypothesis.relatedGoalIds.map(mapThought),
+      relatedThoughtIds: hypothesis.relatedThoughtIds?.map(mapThought),
+      evidenceIds: mapLearningList(hypothesis.evidenceIds),
+      contradictingEvidenceIds: hypothesis.contradictingEvidenceIds
+        ? mapLearningList(hypothesis.contradictingEvidenceIds)
+        : undefined,
+    })),
+    beliefs: entry.beliefs.map((belief) => ({
+      ...belief,
+      id: mapLearning(belief.id),
+      workspaceId,
+      evidenceIds: mapLearningList(belief.evidenceIds),
+      contradictingEvidenceIds: belief.contradictingEvidenceIds
+        ? mapLearningList(belief.contradictingEvidenceIds)
+        : undefined,
+      relatedThoughtIds: belief.relatedThoughtIds?.map(mapThought),
+      previousBeliefId: mapLearningOptional(belief.previousBeliefId),
+      replacementBeliefId: mapLearningOptional(belief.replacementBeliefId),
+    })),
+    beliefUpdates: entry.beliefUpdates.map((update) => ({
+      ...update,
+      id: createId('bup'),
+      workspaceId,
+      previousBeliefId: mapLearningOptional(update.previousBeliefId),
+      updatedBeliefId: mapLearning(update.updatedBeliefId),
+      supportingEvidenceIds: mapLearningList(update.supportingEvidenceIds),
+      contradictingEvidenceIds: mapLearningList(update.contradictingEvidenceIds),
+    })),
+    personalRules: entry.personalRules.map((rule) => ({
+      ...rule,
+      id: mapLearning(rule.id),
+      workspaceId,
+      evidenceIds: mapLearningList(rule.evidenceIds),
+      contradictingEvidenceIds: rule.contradictingEvidenceIds
+        ? mapLearningList(rule.contradictingEvidenceIds)
+        : undefined,
+      relatedValueIds: rule.relatedValueIds.map(mapThought),
+      relatedGoalIds: rule.relatedGoalIds.map(mapThought),
+      relatedThoughtIds: rule.relatedThoughtIds?.map(mapThought),
+      replacedByRuleId: mapLearningOptional(rule.replacedByRuleId),
+    })),
   }
 }

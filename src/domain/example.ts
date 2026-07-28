@@ -8,7 +8,17 @@ import {
   createDefaultRules,
 } from './defaults'
 import { createId, nowIso } from './ids'
-import type { RelationType, Thought, ThoughtRelation, ThoughtType, WorkspaceData } from './types'
+import type {
+  Belief,
+  Evidence,
+  LearningData,
+  Observation,
+  RelationType,
+  Thought,
+  ThoughtRelation,
+  ThoughtType,
+  WorkspaceData,
+} from './types'
 
 interface Seed {
   key: string
@@ -241,5 +251,142 @@ export function createExampleWorkspace(): WorkspaceData {
     comparisons: [],
     rules: createDefaultRules(workspaceId),
     dismissedSuggestionIds: [],
+    ...exampleLearning(workspaceId, idByKey, timestamp),
+  }
+}
+
+/**
+ * One complete turn of the learning loop, so the Reflect, Evidence, and Model
+ * screens have something to show: an experience, what it might mean, a working
+ * model that changed, and the default that came out of it.
+ */
+function exampleLearning(
+  workspaceId: string,
+  idByKey: Map<string, string>,
+  timestamp: string,
+): LearningData {
+  const walkId = idByKey.get('walk')
+  const healthId = idByKey.get('health')
+  const relatedThoughtIds = [walkId, healthId].filter((id): id is string => id !== undefined)
+
+  const observation: Observation = {
+    id: createId('obs'),
+    workspaceId,
+    description: 'After I left the house, I became more willing to move.',
+    occurredAt: timestamp,
+    context: { timeOfDay: 'Evening', tags: ['energy', 'movement'] },
+    energyBefore: 2,
+    energyAfter: 4,
+    relatedThoughtIds,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+
+  const evidence: Evidence = {
+    id: createId('evd'),
+    workspaceId,
+    statement: 'Changing environments may help me regain movement motivation.',
+    observationIds: [observation.id],
+    supportingObservationIds: [observation.id],
+    contradictingObservationIds: [],
+    relatedThoughtIds,
+    confidence: 'low',
+    status: 'emerging',
+    context: { tags: ['energy', 'movement'] },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+
+  const previousBelief: Belief = {
+    id: createId('blf'),
+    workspaceId,
+    statement: 'I need to feel motivated before I start moving.',
+    confidence: 'low',
+    status: 'replaced',
+    evidenceIds: [],
+    contradictingEvidenceIds: [evidence.id],
+    relatedThoughtIds,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+
+  const updatedBelief: Belief = {
+    id: createId('blf'),
+    workspaceId,
+    statement: 'Movement motivation may appear after I change environments or begin moving.',
+    confidence: 'low',
+    status: 'active',
+    evidenceIds: [evidence.id],
+    contradictingEvidenceIds: [],
+    relatedThoughtIds,
+    previousBeliefId: previousBelief.id,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+  previousBelief.replacementBeliefId = updatedBelief.id
+
+  return {
+    observations: [observation],
+    evidence: [evidence],
+    hypotheses: [
+      {
+        id: createId('hyp'),
+        workspaceId,
+        statement:
+          'If I leave the house when my energy is low, I may become more willing to move.',
+        relatedValueIds: [],
+        relatedGoalIds: healthId ? [healthId] : [],
+        relatedThoughtIds: walkId ? [walkId] : [],
+        evidenceIds: [evidence.id],
+        contradictingEvidenceIds: [],
+        status: 'partiallySupported',
+        confidence: 'low',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    ],
+    beliefs: [previousBelief, updatedBelief],
+    beliefUpdates: [
+      {
+        id: createId('bup'),
+        workspaceId,
+        previousBeliefId: previousBelief.id,
+        previousStatement: previousBelief.statement,
+        updatedBeliefId: updatedBelief.id,
+        updatedStatement: updatedBelief.statement,
+        reason:
+          'One recorded experience went the other way round: the willingness followed the change of environment.',
+        supportingEvidenceIds: [evidence.id],
+        contradictingEvidenceIds: [],
+        confidence: 'low',
+        createdAt: timestamp,
+      },
+    ],
+    personalRules: [
+      {
+        id: createId('prule'),
+        workspaceId,
+        name: 'Go outside before deciding about exercise',
+        triggerDescription:
+          'my energy is low and I have stayed indoors for a long time',
+        conditions: [
+          { id: createId('pcond'), description: 'Energy feels like 3 or lower.' },
+          { id: createId('pcond'), description: 'Indoors for most of the day.' },
+        ],
+        defaultResponse:
+          'Go outside for five minutes, then decide whether I want to exercise.',
+        exceptionDescription: 'Not when I am ill, or when the weather makes it unsafe.',
+        relatedValueIds: [],
+        relatedGoalIds: healthId ? [healthId] : [],
+        relatedThoughtIds: walkId ? [walkId] : [],
+        evidenceIds: [evidence.id],
+        contradictingEvidenceIds: [],
+        context: { tags: ['energy', 'movement'] },
+        confidence: 'veryLow',
+        status: 'experimental',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    ],
   }
 }

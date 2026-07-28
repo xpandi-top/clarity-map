@@ -13,6 +13,12 @@ export function createInitialDataState(): DataState {
     rules: [],
     dismissedSuggestionIds: [],
     matrixAxes: {},
+    observations: [],
+    evidence: [],
+    hypotheses: [],
+    beliefs: [],
+    beliefUpdates: [],
+    personalRules: [],
   }
 }
 

@@ -5,6 +5,7 @@ import { createComparisonSlice } from './comparisonSlice'
 import { createDataSlice } from './dataSlice'
 import { createDimensionSlice } from './dimensionSlice'
 import { createInitialDataState, createInitialUiState } from './initialState'
+import { createLearningSlice } from './learningSlice'
 import { migratePersistedState } from './migrations'
 import { createRelationSlice } from './relationSlice'
 import { createRuleSlice } from './ruleSlice'
@@ -24,6 +25,7 @@ export const useStore = create<StoreState>()(
       ...createRelationSlice(...args),
       ...createComparisonSlice(...args),
       ...createRuleSlice(...args),
+      ...createLearningSlice(...args),
       ...createDataSlice(...args),
       ...createUiSlice(...args),
     }),
@@ -43,6 +45,12 @@ export const useStore = create<StoreState>()(
         rules: state.rules,
         dismissedSuggestionIds: state.dismissedSuggestionIds,
         matrixAxes: state.matrixAxes,
+        observations: state.observations,
+        evidence: state.evidence,
+        hypotheses: state.hypotheses,
+        beliefs: state.beliefs,
+        beliefUpdates: state.beliefUpdates,
+        personalRules: state.personalRules,
       }),
     },
   ),

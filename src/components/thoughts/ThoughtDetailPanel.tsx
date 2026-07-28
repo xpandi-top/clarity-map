@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Dialog } from '../common/Dialog'
 import { ConfirmButton } from '../common/ConfirmButton'
+import { RelevantLearning } from '../learning/RelevantLearning'
 import { DimensionInput } from '../dimensions/DimensionInput'
 import { RelationEditor } from './RelationEditor'
 import { BreakdownDialog } from './BreakdownDialog'
@@ -137,6 +138,16 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
               }}
             >
               Open roadmap
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                close()
+                navigate('/reflect')
+              }}
+            >
+              Reflect
             </button>
             <ConfirmButton
               label="Delete"
@@ -315,6 +326,9 @@ function ThoughtDetail({ thought }: { thought: Thought }) {
               ))}
             </div>
           ) : null}
+
+          {/* The user's own records, shown where they might matter again. */}
+          <RelevantLearning thoughtId={thought.id} />
 
           <div className="panel-section stack">
             <h3>Relationships</h3>

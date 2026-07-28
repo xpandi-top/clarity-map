@@ -18,6 +18,16 @@ function collect(state: StoreState, workspaceId: string): WorkspaceData | null {
     ),
     rules: state.rules.filter((rule) => rule.workspaceId === workspaceId),
     dismissedSuggestionIds: state.dismissedSuggestionIds,
+    observations: state.observations.filter(
+      (observation) => observation.workspaceId === workspaceId,
+    ),
+    evidence: state.evidence.filter((entry) => entry.workspaceId === workspaceId),
+    hypotheses: state.hypotheses.filter(
+      (hypothesis) => hypothesis.workspaceId === workspaceId,
+    ),
+    beliefs: state.beliefs.filter((belief) => belief.workspaceId === workspaceId),
+    beliefUpdates: state.beliefUpdates.filter((update) => update.workspaceId === workspaceId),
+    personalRules: state.personalRules.filter((rule) => rule.workspaceId === workspaceId),
   }
 }
 

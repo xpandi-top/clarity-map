@@ -1,9 +1,16 @@
 import type { StateCreator } from 'zustand'
 import type {
+  Belief,
+  BeliefUpdate,
+  ConfidenceLevel,
   Dimension,
   DimensionValue,
+  Evidence,
   ExportEnvelope,
+  Hypothesis,
+  Observation,
   PairwiseComparison,
+  PersonalDefaultRule,
   Rule,
   RuleSuggestion,
   Thought,
@@ -31,6 +38,12 @@ export interface DataState {
   rules: Rule[]
   dismissedSuggestionIds: string[]
   matrixAxes: Record<string, MatrixAxes>
+  observations: Observation[]
+  evidence: Evidence[]
+  hypotheses: Hypothesis[]
+  beliefs: Belief[]
+  beliefUpdates: BeliefUpdate[]
+  personalRules: PersonalDefaultRule[]
 }
 
 /** Snapshot kept so the most recent deletion can be undone. */
@@ -113,6 +126,53 @@ export interface RuleActions {
   acceptSuggestion: (suggestion: RuleSuggestion) => void
 }
 
+/** What a belief revision needs. The previous belief is kept, never edited. */
+export interface BeliefUpdateInput {
+  previousBeliefId?: string
+  updatedStatement: string
+  reason: string
+  supportingEvidenceIds?: string[]
+  contradictingEvidenceIds?: string[]
+  confidence?: ConfidenceLevel
+  relatedThoughtIds?: string[]
+  reviewAt?: string
+}
+
+export interface LearningActions {
+  addObservation: (input: Partial<Observation> & { description: string }) => string | null
+  updateObservation: (observationId: string, patch: Partial<Observation>) => void
+  deleteObservation: (observationId: string) => void
+
+  addEvidence: (input: Partial<Evidence> & { statement: string }) => string | null
+  updateEvidence: (evidenceId: string, patch: Partial<Evidence>) => void
+  deleteEvidence: (evidenceId: string) => void
+
+  addHypothesis: (input: Partial<Hypothesis> & { statement: string }) => string | null
+  updateHypothesis: (hypothesisId: string, patch: Partial<Hypothesis>) => void
+  deleteHypothesis: (hypothesisId: string) => void
+
+  addBelief: (input: Partial<Belief> & { statement: string }) => string | null
+  updateBelief: (beliefId: string, patch: Partial<Belief>) => void
+  deleteBelief: (beliefId: string) => void
+
+  /**
+   * Writes a revision: creates the updated belief, marks the previous one
+   * replaced without deleting it, and records why. Returns the new belief id.
+   */
+  recordBeliefUpdate: (input: BeliefUpdateInput) => string | null
+
+  addPersonalRule: (
+    input: Partial<PersonalDefaultRule> & { name: string; defaultResponse: string },
+  ) => string | null
+  updatePersonalRule: (ruleId: string, patch: Partial<PersonalDefaultRule>) => void
+  /** Keeps the original and links it to its successor. */
+  replacePersonalRule: (
+    ruleId: string,
+    input: Partial<PersonalDefaultRule> & { name: string; defaultResponse: string },
+  ) => string | null
+  deletePersonalRule: (ruleId: string) => void
+}
+
 export interface DataActions {
   exportWorkspaceData: (workspaceId: string) => WorkspaceData | null
   exportAllData: () => WorkspaceData[]
@@ -134,6 +194,7 @@ export type StoreState = DataState &
   RelationActions &
   ComparisonActions &
   RuleActions &
+  LearningActions &
   DataActions &
   UiActions
 

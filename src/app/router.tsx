@@ -2,6 +2,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
 import { RequireWorkspace } from './RequireWorkspace'
 import { WelcomeScreen } from '../features/welcome/WelcomeScreen'
+import { DashboardScreen } from '../features/dashboard/DashboardScreen'
+import { ReflectScreen } from '../features/reflect/ReflectScreen'
+import { EvidenceInboxScreen } from '../features/evidence/EvidenceInboxScreen'
+import { ModelScreen } from '../features/model/ModelScreen'
 import { CaptureScreen } from '../features/capture/CaptureScreen'
 import { ImportanceReviewScreen } from '../features/review/ImportanceReviewScreen'
 import { MatrixScreen } from '../features/matrix/MatrixScreen'
@@ -20,7 +24,11 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route path="/welcome" element={<WelcomeScreen />} />
         <Route element={<RequireWorkspace />}>
+          <Route path="/dashboard" element={<DashboardScreen />} />
           <Route path="/capture" element={<CaptureScreen />} />
+          <Route path="/reflect" element={<ReflectScreen />} />
+          <Route path="/evidence" element={<EvidenceInboxScreen />} />
+          <Route path="/model" element={<ModelScreen />} />
           <Route path="/review/importance" element={<ImportanceReviewScreen />} />
           <Route path="/matrix" element={<MatrixScreen />} />
           <Route path="/compare" element={<CompareScreen />} />

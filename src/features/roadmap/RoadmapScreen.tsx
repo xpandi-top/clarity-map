@@ -14,9 +14,18 @@ import { depthsFrom, neighbourhoodIds, relationEndpoints } from '../../domain/gr
 import { RELATION_STYLE } from '../../domain/relationStyle'
 import type { RelationType } from '../../domain/types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
-import { useRelations, useStore, useThought, useThoughts } from '../../store'
+import { buildLearningGraph } from '../../domain/learningGraph'
+import { LearningGraphView } from '../../components/learning/LearningGraphView'
+import { useLearningData, useRelations, useStore, useThought, useThoughts } from '../../store'
 
 type Direction = 'both' | 'up' | 'down'
+
+/**
+ * Which graph is on screen. Planning is the default; combining both is opt-in
+ * because the two together stop being readable well before they become
+ * useful.
+ */
+type GraphMode = 'planning' | 'learning' | 'combined'
 
 /** Sentinel for the "no limit" entry in the levels picker. */
 const ALL_LEVELS = 99
@@ -31,6 +40,8 @@ export function RoadmapScreen() {
   const addRelation = useStore((state) => state.addRelation)
   const showToast = useStore((state) => state.showToast)
 
+  const learning = useLearningData()
+
   const isNarrow = useMediaQuery('(max-width: 760px)')
   const [forceList, setForceList] = useState(false)
   const [direction, setDirection] = useState<Direction>('both')
@@ -41,6 +52,7 @@ export function RoadmapScreen() {
   const [showRelationEditor, setShowRelationEditor] = useState(false)
   const [connectType, setConnectType] = useState<RelationType>('serves')
   const [showChecklist, setShowChecklist] = useState(false)
+  const [graphMode, setGraphMode] = useState<GraphMode>('planning')
 
   const visibleRelations = useMemo(
     () => relations.filter((relation) => !hiddenTypes.includes(relation.type)),
@@ -80,6 +92,17 @@ export function RoadmapScreen() {
       ),
     [visibleRelations, includedIds],
   )
+
+  const learningGraph = useMemo(() => {
+    if (!focus || graphMode === 'planning') return { nodes: [], edges: [] }
+    return buildLearningGraph(learning, {
+      focusId: focus.id,
+      maxDepth: 3,
+      // In learning mode only the thought in focus is drawn, so the records
+      // around it are what the eye follows.
+      thoughts: graphMode === 'combined' ? thoughts : [focus],
+    })
+  }, [learning, graphMode, focus, thoughts])
 
   const byId = useMemo(() => new Map(thoughts.map((entry) => [entry.id, entry])), [thoughts])
   const selectedEdge = subgraphRelations.find((relation) => relation.id === selectedEdgeId)
@@ -130,6 +153,19 @@ export function RoadmapScreen() {
       </div>
 
       <section className="toolbar">
+        <div className="field">
+          <label htmlFor="roadmap-graph-mode">Graph</label>
+          <select
+            id="roadmap-graph-mode"
+            className="select"
+            value={graphMode}
+            onChange={(event) => setGraphMode(event.target.value as GraphMode)}
+          >
+            <option value="planning">Planning</option>
+            <option value="learning">Learning</option>
+            <option value="combined">Combined</option>
+          </select>
+        </div>
         <div className="field">
           <label htmlFor="roadmap-direction">Show</label>
           <select
@@ -244,7 +280,22 @@ export function RoadmapScreen() {
         </p>
       ) : null}
 
-      {listMode ? (
+      {graphMode !== 'planning' ? (
+        learningGraph.nodes.length <= 1 ? (
+          <p className="empty-state">
+            Nothing you have recorded is linked to this thought yet.{' '}
+            <Link to="/reflect">Record what happened</Link> and link it here.
+          </p>
+        ) : (
+          <>
+            <LearningGraphView graph={learningGraph} focusId={focus.id} />
+            <p className="faint" style={{ margin: 0 }}>
+              Observations, evidence, beliefs, and defaults connected to this thought. Read-only
+              — connections are made where the records are written.
+            </p>
+          </>
+        )
+      ) : listMode ? (
         <RoadmapList
           thoughts={subgraphThoughts}
           relations={subgraphRelations}
@@ -286,7 +337,7 @@ export function RoadmapScreen() {
         />
       )}
 
-      {listMode ? null : (
+      {listMode || graphMode !== 'planning' ? null : (
         <p className="faint" style={{ margin: 0 }}>
           Drag a node to move it. Drag from the dot under one node to the dot above another to
           connect them. Select a line and press Delete to remove it. Click any node to open its

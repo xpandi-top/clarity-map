@@ -7,9 +7,8 @@ import type { DataState } from './types'
 /**
  * Brings a persisted snapshot up to the current schema version.
  *
- * Only version 1 exists today, but the function is wired up so future versions
- * have a single place to add a step, and so unreadable snapshots fall back to a
- * clean state instead of crashing the app on load.
+ * Each version has a single place to add a step, and unreadable snapshots fall
+ * back to a clean state instead of crashing the app on load.
  */
 export function migratePersistedState(persisted: unknown, version: number): DataState {
   const base = createInitialDataState()
@@ -33,6 +32,21 @@ export function migratePersistedState(persisted: unknown, version: number): Data
       dimensionsByWorkspace[workspaceId] = backfillBuiltInPrompts(dimensions, defaults)
     }
     state = { ...state, dimensionsByWorkspace }
+  }
+
+  // Step 2 → 3: the learning records did not exist. An older snapshot simply
+  // has none of them; the empty arrays from `createInitialDataState` already
+  // spread in above, so this only has to guard against a partial object.
+  if (from < 3) {
+    state = {
+      ...state,
+      observations: state.observations ?? [],
+      evidence: state.evidence ?? [],
+      hypotheses: state.hypotheses ?? [],
+      beliefs: state.beliefs ?? [],
+      beliefUpdates: state.beliefUpdates ?? [],
+      personalRules: state.personalRules ?? [],
+    }
   }
 
   // Future steps go here, each guarded by the version it upgrades from.

@@ -6,6 +6,7 @@ import {
 } from '../domain/defaults'
 import { createExampleWorkspace } from '../domain/example'
 import { createId, nowIso } from '../domain/ids'
+import { emptyLearningData } from '../domain/learning'
 import { reassignIds } from '../domain/importExport'
 import type { WorkspaceData } from '../domain/types'
 import { createInitialDataState } from './initialState'
@@ -24,6 +25,12 @@ export function ingestWorkspace(state: StoreState, entry: WorkspaceData): Partia
     relations: [...state.relations, ...entry.relations],
     comparisons: [...state.comparisons, ...entry.comparisons],
     rules: [...state.rules, ...entry.rules],
+    observations: [...state.observations, ...entry.observations],
+    evidence: [...state.evidence, ...entry.evidence],
+    hypotheses: [...state.hypotheses, ...entry.hypotheses],
+    beliefs: [...state.beliefs, ...entry.beliefs],
+    beliefUpdates: [...state.beliefUpdates, ...entry.beliefUpdates],
+    personalRules: [...state.personalRules, ...entry.personalRules],
     matrixAxes: {
       ...state.matrixAxes,
       [entry.workspace.id]: {
@@ -46,6 +53,7 @@ export const createWorkspaceSlice: SliceCreator<WorkspaceActions> = (set, get) =
         comparisons: [],
         rules: createDefaultRules(workspace.id),
         dismissedSuggestionIds: [],
+        ...emptyLearningData(),
       }),
     )
     return workspace.id
@@ -86,6 +94,18 @@ export const createWorkspaceSlice: SliceCreator<WorkspaceActions> = (set, get) =
       ),
       rules: state.rules.filter((rule) => rule.workspaceId === workspaceId),
       dismissedSuggestionIds: [],
+      observations: state.observations.filter(
+        (observation) => observation.workspaceId === workspaceId,
+      ),
+      evidence: state.evidence.filter((entry) => entry.workspaceId === workspaceId),
+      hypotheses: state.hypotheses.filter(
+        (hypothesis) => hypothesis.workspaceId === workspaceId,
+      ),
+      beliefs: state.beliefs.filter((belief) => belief.workspaceId === workspaceId),
+      beliefUpdates: state.beliefUpdates.filter(
+        (update) => update.workspaceId === workspaceId,
+      ),
+      personalRules: state.personalRules.filter((rule) => rule.workspaceId === workspaceId),
     })
     copy.rules = copy.rules.map((rule) => ({ ...rule, id: createId('rule') }))
     set((current) => ingestWorkspace(current, copy))
@@ -99,6 +119,20 @@ export const createWorkspaceSlice: SliceCreator<WorkspaceActions> = (set, get) =
       comparisons: state.comparisons.filter(
         (comparison) => comparison.workspaceId !== workspaceId,
       ),
+      // Learning records point at thoughts, so they go with them rather than
+      // being left behind referring to nothing.
+      observations: state.observations.filter(
+        (observation) => observation.workspaceId !== workspaceId,
+      ),
+      evidence: state.evidence.filter((entry) => entry.workspaceId !== workspaceId),
+      hypotheses: state.hypotheses.filter(
+        (hypothesis) => hypothesis.workspaceId !== workspaceId,
+      ),
+      beliefs: state.beliefs.filter((belief) => belief.workspaceId !== workspaceId),
+      beliefUpdates: state.beliefUpdates.filter(
+        (update) => update.workspaceId !== workspaceId,
+      ),
+      personalRules: state.personalRules.filter((rule) => rule.workspaceId !== workspaceId),
       selectedThoughtId: null,
       lastDeletion: null,
     }))
@@ -121,6 +155,18 @@ export const createWorkspaceSlice: SliceCreator<WorkspaceActions> = (set, get) =
           (comparison) => comparison.workspaceId !== workspaceId,
         ),
         rules: state.rules.filter((rule) => rule.workspaceId !== workspaceId),
+        observations: state.observations.filter(
+          (observation) => observation.workspaceId !== workspaceId,
+        ),
+        evidence: state.evidence.filter((entry) => entry.workspaceId !== workspaceId),
+        hypotheses: state.hypotheses.filter(
+          (hypothesis) => hypothesis.workspaceId !== workspaceId,
+        ),
+        beliefs: state.beliefs.filter((belief) => belief.workspaceId !== workspaceId),
+        beliefUpdates: state.beliefUpdates.filter(
+          (update) => update.workspaceId !== workspaceId,
+        ),
+        personalRules: state.personalRules.filter((rule) => rule.workspaceId !== workspaceId),
         currentWorkspaceId:
           state.currentWorkspaceId === workspaceId
             ? (workspaces[0]?.id ?? null)

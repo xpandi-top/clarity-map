@@ -18,10 +18,22 @@ const STAGES = [
 ]
 
 /**
+ * The other direction: something happened, and it might mean something. This
+ * loop runs from experience back to what the user believes, so it is a
+ * separate group rather than another step in the plan.
+ */
+const LEARNING = [
+  { to: '/reflect', label: 'Reflect' },
+  { to: '/evidence', label: 'Evidence' },
+  { to: '/model', label: 'Model' },
+]
+
+/**
  * Optional at any point. Importance is one way to answer a dimension directly,
  * but comparing on the Compare screen does the same job without it.
  */
 const TOOLS = [
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/review/importance', label: 'Importance' },
   { to: '/settings/data', label: 'Settings' },
 ]
@@ -54,6 +66,19 @@ export function AppLayout() {
                   </li>
                 ))}
               </ol>
+              <span className="main-nav__divider" aria-hidden="true" />
+              <ul className="main-nav__tools" aria-label="Learning">
+                {LEARNING.map((entry) => (
+                  <li key={entry.to}>
+                    <NavLink
+                      to={entry.to}
+                      className={({ isActive }) => (isActive ? 'is-active' : undefined)}
+                    >
+                      {entry.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
               <span className="main-nav__divider" aria-hidden="true" />
               <ul className="main-nav__tools">
                 {TOOLS.map((tool) => (

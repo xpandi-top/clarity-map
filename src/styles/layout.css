@@ -860,3 +860,26 @@
   max-width: 22rem;
   flex: 1 1 14rem;
 }
+
+/* --- Learning ------------------------------------------------------------
+   Records of what happened sit quieter than the plan they inform: a thin
+   marker rather than a card, so a thought's own content still leads. */
+
+.learning-reminder {
+  border-left: 3px solid var(--border-strong);
+  padding-left: var(--space-3);
+}
+
+.learning-reminder p {
+  margin-bottom: var(--space-1);
+}
+
+/* One step of the model timeline. The line down the left is the history. */
+.model-step {
+  border-left: 3px solid var(--accent-soft);
+  padding-left: var(--space-4);
+}
+
+.model-step ul {
+  padding-left: var(--space-5);
+}

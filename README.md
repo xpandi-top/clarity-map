@@ -1,6 +1,9 @@
 # Clarity Map
 
-Turn mental clutter into a clear and actionable personal map.
+Plan what matters. Learn what works.
+
+Turn mental clutter into a clear and actionable personal map — and turn what
+has already happened into self-knowledge you can reuse.
 
 **Live demo:** https://apps.xpandi.top/clarity-map/
 
@@ -31,6 +34,47 @@ questions like:
 The tone is deliberately quiet. Nothing scores you, nothing nags, and "not sure
 yet" is always a valid answer. `Should` is not treated as a failure — it is
 simply information about where the pull is coming from.
+
+### Two directions, one loop
+
+Planning runs top-down:
+
+```text
+Value → Principle → Goal → Milestone → Project → Action
+```
+
+Learning runs the other way, starting from something that already happened:
+
+```text
+Experience → Observation → Evidence → Belief update → Default rule → Future decision
+```
+
+Together they close:
+
+```text
+Value → Hypothesis → Small experiment → Observation → Evidence
+→ Belief update → Updated default rule → Next action → New observation
+```
+
+The app does not treat you as a fixed personality to be discovered once. Your
+understanding of yourself is a model, and a model can be revised when the
+evidence changes.
+
+The purpose of the learning half is narrow and practical: **stop solving the
+same internal problem from scratch every time it happens.** It does that by
+handing back your own recorded evidence at the moment it becomes relevant —
+never a slogan, never encouragement, and never a conclusion the app worked out
+on your behalf:
+
+> You have two observations suggesting that leaving the house increased your
+> willingness to move.
+
+not
+
+> You can do it. Stay strong.
+
+Every reminder names where it came from, and you can open the original
+observation behind it.
 
 ---
 
@@ -94,16 +138,56 @@ simply information about where the pull is coming from.
   milestone X" downwards and X reads "is a milestone of" the goal upwards.
 - **Rules** — user-defined conditions that produce *suggestions only*. They are
   applied, ignored, or permanently dismissed by you.
+- **Reflect** — a deliberately light five-step flow: what happened, what you
+  directly observed versus what you think it may indicate, what it connects to,
+  whether it changed your model, and whether it is worth remembering. One
+  sentence is a complete entry; everything after it is optional, and the app
+  never tells you your interpretation is right.
+- **Observations, evidence, and hypotheses** — what happened is stored apart
+  from what you make of it, so you can change your reading without losing the
+  record. Evidence can rest on several observations, including ones that point
+  the other way.
+- **Beliefs and belief updates** — your current working model, revised rather
+  than overwritten. A replaced belief keeps its place in the timeline together
+  with the reason it changed and the evidence on both sides.
+- **Personal default rules** — "when this happens, try this first", with
+  trigger conditions, exceptions, supporting and contradicting evidence, a
+  confidence level, and an experimental / active / needs review / retired /
+  replaced status. A replaced rule is kept and linked to its successor.
+- **Evidence inbox** — observations nobody has interpreted yet, readings that
+  rest on a single record, evidence that disagrees with itself, beliefs worth a
+  second look, and rules due for review. "Mark as unresolved" is a first-class
+  answer.
+- **Model timeline** — previous belief → relevant experience → observation →
+  evidence → updated belief → default rule, with a learning graph centred on
+  one belief or rule at a time.
+- **Learning graph** — eleven epistemic relation types (`supportsBelief`,
+  `weakensBelief`, `informsRule`, `updates`, `replaces`, and so on), available
+  on the roadmap as a Planning / Learning / Combined switch. Combined is opt-in,
+  because both graphs at once stop being readable well before they become
+  useful.
+- **Evidence reminders** — the thought detail panel, the dashboard, and the
+  Reflect screen show what you have already learned that touches the thing in
+  front of you, matched by explicit links or shared tags, always with sources
+  attached.
+- **Dashboard** — "What I am trying to do" and "What I am learning" side by
+  side, plus a manual check of your own defaults against a situation you type.
 - **Local persistence, import and export** — JSON export with a validated,
-  previewed import that never damages existing data when it fails.
-- **Example workspace** — loaded only when you ask for it.
+  previewed import that never damages existing data when it fails. Learning
+  records travel with the workspace, including the full belief history.
+- **Example workspace** — loaded only when you ask for it, with one complete
+  turn of the learning loop already in it.
 
 ## Screens
 
 | Route | Purpose |
 | --- | --- |
 | `#/welcome` | Start, continue, load the example, or import |
+| `#/dashboard` | What I am trying to do, and what I am learning |
 | `#/capture` | Write thoughts down; answer Want or Should if you want to |
+| `#/reflect` | Record what happened and what it may indicate |
+| `#/evidence` | Observations and readings not yet made sense of |
+| `#/model` | How your beliefs and defaults have changed, and why |
 | `#/structure` | Classify thoughts and see relationships |
 | `#/roadmap` · `#/roadmap/:thoughtId` | Graph of what sits above and below |
 | `#/actions` | Assess actions and habits |
@@ -123,6 +207,15 @@ Capture      write it down
 → Actions    what could actually be done
 → Compare    which of these two matters more
 → Matrix     read the result, plotted from those comparisons
+```
+
+And the loop that runs the other way, whenever something has actually
+happened:
+
+```text
+Reflect      what happened, and what it may indicate
+→ Evidence   what has not been made sense of yet
+→ Model      what you used to think, and what changed it
 ```
 
 You can move between stages in any order without losing work.
@@ -204,14 +297,21 @@ Export produces a JSON file:
 ```json
 {
   "app": "clarity-map",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "exportedAt": "ISO_DATE",
   "data": { "workspaces": [] }
 }
 ```
 
-Files exported at schema version 1 still import; built-in dimensions in them
-are given the comparative wording that ships with the app.
+Each workspace carries its thoughts, dimensions, relations, comparisons, and
+rules, plus the learning records: `observations`, `evidence`, `hypotheses`,
+`beliefs`, `beliefUpdates`, and `personalRules`.
+
+Older files still import. Schema 1 exports have no comparative wording, so
+built-in dimensions are given the wording that ships with the app; schema 2
+exports have no learning records, so those arrays come in empty. Links that
+point at records the file does not contain are dropped rather than left
+dangling.
 
 Import parses the file safely, checks the application identifier and schema
 version, coerces every record, shows a preview, and lets you merge or replace.
@@ -239,10 +339,20 @@ The deployed page is static files on GitHub Pages.
   heuristic, not language understanding.
 - Node positions you drag on the roadmap last for the session. They are not
   persisted, so reopening the roadmap re-runs the automatic layout.
-- The JavaScript bundle is a single chunk of roughly 585 kB (about 180 kB
+- The JavaScript bundle is a single chunk of roughly 700 kB (about 205 kB
   gzipped), most of it the graph library. Code splitting is an easy follow-up.
 - `npm audit` reports an advisory against `react-router` that concerns RSC mode
   only. This app is a client-rendered `HashRouter` SPA and does not use RSC.
+- Evidence reminders are matched by explicit links and shared tags, not by
+  meaning. A record with no link and no matching tag will not surface on its
+  own.
+- Rule triggers are written in your own words and checked only when you ask.
+  There is no background monitoring, and there could not be: this is a static
+  page with no server.
+- The learning graph shows one belief or rule at a time. There is no
+  whole-graph view, because it would not be readable.
+- Nothing here is a diagnosis or medical advice. The app organises your records
+  and makes connections visible; the interpretation stays yours.
 
 ## Future opportunities
 
@@ -251,6 +361,9 @@ The deployed page is static files on GitHub Pages.
 - Optional encrypted file sync, still without an account.
 - Saved filter presets and per-quadrant bulk edits.
 - Undo history beyond the most recent deletion.
+- Context-aware matching of rules, so a default surfaces from the energy level
+  and time of day recorded on an observation rather than from typed words.
+- A review queue that schedules belief and rule reviews by date.
 
 ## License
 

@@ -2,9 +2,23 @@ import { useMemo } from 'react'
 import { BUILTIN_DIMENSION, createDefaultDimensions } from '../domain/defaults'
 import { backfillBuiltInPrompts } from '../domain/prompts'
 import { createRankAxis, isRankAxis, rankedDimensionId } from '../domain/rankingAxis'
+import { buildLearningInbox, type LearningInbox } from '../domain/learningInbox'
+import { relevantLearning, type LearningReminder } from '../domain/relevance'
 import { evaluateRules } from '../domain/rules'
-import type { Dimension, RuleSuggestion, Thought } from '../domain/types'
+import type {
+  Belief,
+  BeliefUpdate,
+  Dimension,
+  Evidence,
+  Hypothesis,
+  LearningData,
+  Observation,
+  PersonalDefaultRule,
+  RuleSuggestion,
+  Thought,
+} from '../domain/types'
 import { useStore } from './store'
+import type { StoreState } from './types'
 
 const EMPTY: never[] = []
 
@@ -127,6 +141,72 @@ export function useSuggestionsFor(thoughtId: string | null): RuleSuggestion[] {
         ? suggestions.filter((suggestion) => suggestion.thoughtId === thoughtId)
         : EMPTY,
     [suggestions, thoughtId],
+  )
+}
+
+/* --- Learning ----------------------------------------------------------- */
+
+function useWorkspaceSlice<T extends { workspaceId: string }>(
+  select: (state: StoreState) => T[],
+): T[] {
+  const entries = useStore(select)
+  const currentId = useStore((state) => state.currentWorkspaceId)
+  return useMemo(
+    () => (currentId ? entries.filter((entry) => entry.workspaceId === currentId) : EMPTY),
+    [entries, currentId],
+  )
+}
+
+export function useObservations(): Observation[] {
+  return useWorkspaceSlice((state) => state.observations)
+}
+
+export function useEvidence(): Evidence[] {
+  return useWorkspaceSlice((state) => state.evidence)
+}
+
+export function useHypotheses(): Hypothesis[] {
+  return useWorkspaceSlice((state) => state.hypotheses)
+}
+
+export function useBeliefs(): Belief[] {
+  return useWorkspaceSlice((state) => state.beliefs)
+}
+
+export function useBeliefUpdates(): BeliefUpdate[] {
+  return useWorkspaceSlice((state) => state.beliefUpdates)
+}
+
+export function usePersonalRules(): PersonalDefaultRule[] {
+  return useWorkspaceSlice((state) => state.personalRules)
+}
+
+/** Every learning record in the current workspace, in one object. */
+export function useLearningData(): LearningData {
+  const observations = useObservations()
+  const evidence = useEvidence()
+  const hypotheses = useHypotheses()
+  const beliefs = useBeliefs()
+  const beliefUpdates = useBeliefUpdates()
+  const personalRules = usePersonalRules()
+  return useMemo(
+    () => ({ observations, evidence, hypotheses, beliefs, beliefUpdates, personalRules }),
+    [observations, evidence, hypotheses, beliefs, beliefUpdates, personalRules],
+  )
+}
+
+export function useLearningInbox(): LearningInbox {
+  const data = useLearningData()
+  return useMemo(() => buildLearningInbox(data), [data])
+}
+
+/** What the user has already learned that bears on one thought. */
+export function useRelevantLearning(thoughtId: string | null): LearningReminder[] {
+  const data = useLearningData()
+  const thought = useThought(thoughtId)
+  return useMemo(
+    () => (thought ? relevantLearning(thought, data) : EMPTY),
+    [thought, data],
   )
 }
 

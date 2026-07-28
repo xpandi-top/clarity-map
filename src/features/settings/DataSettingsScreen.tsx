@@ -119,7 +119,7 @@ export function DataSettingsScreen() {
                 Duplicate workspace
               </button>
               <ConfirmButton
-                label="Clear this workspace's thoughts"
+                label="Clear this workspace's thoughts and records"
                 confirmLabel="Confirm clear"
                 onConfirm={() => {
                   clearWorkspace(workspace.id)
@@ -220,7 +220,8 @@ export function DataSettingsScreen() {
               {pending.preview.workspaces.map((entry) => (
                 <li key={entry.name}>
                   {entry.name}: {entry.thoughts} thoughts, {entry.relations} relationships,{' '}
-                  {entry.comparisons} comparisons, {entry.rules} rules
+                  {entry.comparisons} comparisons, {entry.rules} rules,{' '}
+                  {entry.learningRecords} learning records
                   {entry.conflicts ? ' — a workspace with this id already exists, so a copy will be made' : ''}
                 </li>
               ))}
